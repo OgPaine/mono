@@ -32,6 +32,13 @@ createApp({
     });
 
     const state = wire.state;
+    const toasts = ref([]);
+    function pushToast(text, level='info'){
+      const id = Date.now() + Math.random();
+      toasts.value.push({ id, text: String(text||''), level });
+      setTimeout(() => { const i = toasts.value.findIndex(t => t.id===id); if (i>=0) toasts.value.splice(i,1); }, 4000);
+    }
+    wire.onDebug(({ level, msg }) => pushToast(msg||'Server notice', level||'info'));
     const canv = new Map();
     const CARD_W = 64;
     const CARD_H = 32;
@@ -149,9 +156,16 @@ createApp({
       return isMeEnabled.value && activePlayerIdx.value === (my.value-1);
     });
 
+    const rollPending = ref(false);
+    let lastDiceSeqSeen = state.dice.seq|0;
+    let lastTurnRevSeen = state.turn.rev|0;
     function rollMine(){
       if (!(my.value>=1 && my.value<=6)) return;
       if (!isMyTurn.value) return; // UI hard gate
+      if (rollPending.value) return;
+      rollPending.value = true;
+      lastDiceSeqSeen = state.dice.seq|0;
+      lastTurnRevSeen = state.turn.rev|0;
       wire.rollDice(my.value-1, { autoMove:true, requireTurn:true });
     }
     function useGOJ(deck){
@@ -223,6 +237,28 @@ createApp({
       return {gridColumn:(x+1),gridRow:(y+1)};
     }
 
+    // Canvas rotation and sizing per board index
+    function rotationFor(boardIndex){
+      // Orient like a real board: bottom 0°, left +90°, top 180°, right -90°
+      if (boardIndex >= 11 && boardIndex <= 19) return 90;   // left side
+      if (boardIndex >= 21 && boardIndex <= 29) return 180;  // top side
+      if (boardIndex >= 31 && boardIndex <= 39) return -90;  // right side
+      return 0;                                              // bottom + corners
+    }
+    function canvasStyle(boardIndex){
+      const rot = rotationFor(boardIndex);
+      const scale = (oledScale.value | 0) || 1;
+      const w = 64 * scale;
+      const h = 32 * scale;
+      const style = {
+        width: (rot === 90 || rot === -90) ? (h + 'px') : (w + 'px'),
+        height: (rot === 90 || rot === -90) ? (w + 'px') : (h + 'px'),
+        transformOrigin: 'center center'
+      };
+      if (rot) style.transform = `rotate(${rot}deg)`;
+      return style;
+    }
+
     function ownerTag(o){
       if(o===0) return 'BANK';
       const n = (state.playerNames[o-1] || `P${o}`).toUpperCase().trim();
@@ -252,12 +288,12 @@ createApp({
         const owned = PROPS.reduce((n,pp,ii)=>
           n + ((pp.type==='rr' && state.properties[ii].owner===s.owner) ? 1 : 0), 0);
         const rrRent = [0,25,50,100,200][owned];
-        L1=ownerTag(s.owner); L2='RENT'; L3='$'+rrRent; L4=owned+' RR OWNED';
+        L1=ownerTag(s.owner); L2=''; L3='$'+rrRent; L4=owned+' RR OWNED';
       } else if (isUtil(p)){
-        L1=ownerTag(s.owner); L2='RENT'; L3=utilMult(state,i)+' DICE'; L4='';
+        L1=ownerTag(s.owner); L2=''; L3=utilMult(state,i)+' DICE'; L4='';
       } else {
         const r=rent(state,i);
-        L1=ownerTag(s.owner); L2='RENT'; L3='$'+r; L4 = s.hotel>0 ? 'H 0 HT 1' : ('H '+s.houses+' HT 0');
+        L1=ownerTag(s.owner); L2=''; L3='$'+r; L4 = s.hotel>0 ? 'H 0 HT 1' : ('H '+s.houses+' HT 0');
       }
       onUnmounted(() => stopRole());
 
@@ -321,7 +357,7 @@ createApp({
 
     function infoLine(i){
       const p = PROPS[i], s = state.properties[i];
-      if (s.owner===0) return `Price: $${p.price} Mort $${p.mort}`;
+      if (s.owner===0) return `Price: $${p.price} Â· Mort $${p.mort}`;
       if (isUtil(p))   return `Rent: ${utilMult(state,i)} dice`;
       if (isRR(p))     return `Rent: $${rent(state,i)}`;
       const mono = (s.houses===0 && s.hotel===0 &&
@@ -339,6 +375,12 @@ createApp({
         diceA.value = state.dice.a|0;
         diceB.value = state.dice.b|0;
         diceBy.value = (state.dice.by ?? -1)|0;
+      }
+      // clear pending roll when server advances dice seq or turn rev
+      if (rollPending.value) {
+        if ((state.dice.seq|0) !== (lastDiceSeqSeen|0) || (state.turn.rev|0) !== (lastTurnRevSeen|0)) {
+          rollPending.value = false;
+        }
       }
       renderTick.value++;
     }));
@@ -358,15 +400,15 @@ createApp({
 
     return {
       state, boardIndexToPropIndex, nonBuy: NON_BUY_LABELS,
-      setCanvas, pIndex, propName, kindLabel, colors, groupOf, gridPos,
+      setCanvas, pIndex, propName, kindLabel, colors, groupOf, gridPos, canvasStyle,
       oledScale, oledBold, oledInvert,
       playersAt, initials, infoLine,
       renderTick,
+      toasts,
+      rollPending,
       myName, myMoney, myPos, posDraft, applyPosDraft, bumpMyPos, setMyPos,
       diceSeq, diceA, diceB, diceBy, lastRoller, lastCard, DICE, rollMine, useGOJ,
       isMyTurn, isMeEnabled, amInJail, hasGOJ
     };
   }
 }).mount("#app");
-
-

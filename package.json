@@ -4,9 +4,11 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
+    "dotenv": "^17.2.3",
     "express": "^4.19.2",
     "ws": "^8.18.0"
   }

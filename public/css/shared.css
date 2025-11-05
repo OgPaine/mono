@@ -1,38 +1,189 @@
-:root{color-scheme:dark light}
-body{background:#0b0b0b;color:#e5e7eb;font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif}
+:root {
+  color-scheme: dark light
+}
+
+body {
+  background: #0b0b0b;
+  color: #e5e7eb;
+  font-family: system-ui, -apple-system, Segoe UI, Arial, sans-serif
+}
 
 /* Common tiles and OLED styling used by GM and Player */
-.tile{position:relative;background:#111;border:1px solid #262626;border-radius:10px;padding:10px}
-.oled{image-rendering:pixelated;border:2px solid #000;border-radius:6px;background:#000}
-.picons{position:absolute;right:6px;bottom:6px;display:flex;flex-wrap:wrap;gap:4px;pointer-events:none}
-.picon{border-radius:9999px;display:flex;align-items:center;justify-content:center;font-weight:700}
+.tile {
+  position: relative;
+  background: #111;
+  border: 1px solid #262626;
+  border-radius: 10px;
+}
+
+.oled {
+  image-rendering: pixelated;
+  border: 2px solid #000;
+  border-radius: 6px;
+  background: #000;
+  display: block;
+  margin-inline: auto;
+  /* centers horizontally */
+}
+.money {
+  font-size: 20px;
+  color: #22c55e;
+  font-weight: 800;
+  line-height: 1
+}
+
+.picons {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  pointer-events: none
+}
+
+.picon {
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700
+}
 
 
 /* Player token colors */
-.p1{background:#ef4444}.p2{background:#22c55e}.p3{background:#3b82f6}
-.p4{background:#eab308}.p5{background:#a855f7}.p6{background:#f97316}
+.p1 {
+  background: #ef4444
+}
+
+.p2 {
+  background: #22c55e
+}
+
+.p3 {
+  background: #3b82f6
+}
+
+.p4 {
+  background: #eab308
+}
+
+.p5 {
+  background: #a855f7
+}
+
+.p6 {
+  background: #f97316
+}
 
 /* Player-specific helpers (also safe for GM) */
-.nbtext{text-align:center;font-size:12px}
-.topbar{height:6px;width:100%;border-radius:4px;margin-bottom:6px}
-.name{font-size:12px;font-weight:600;line-height:1.2}
-.kind{font-size:11px;color:#9ca3af;margin-top:2px}
-.meta{font-size:11px;color:#cbd5e1;margin-top:6px}
+.nbtext {
+  text-align: center;
+  font-size: 12px
+}
+
+.topbar {
+  padding: 4px;
+  height: 20px;
+  width: 100%;
+  border-radius: 10px 10px 0 0;
+  margin-bottom: 6px;
+}
+
+.name {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1
+}
+
+.kind {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 2px
+}
+
+.meta {
+  font-size: 11px;
+  color: #cbd5e1;
+  margin-top: 6px
+}
 
 /* Player controls */
-.ctl{display:flex;align-items:center;gap:6px;font-size:13px}
-.btn{background:#1f2937;border:1px solid #374151;border-radius:6px;color:#e5e7eb;padding:6px 10px;cursor:pointer}
-.btn:active{transform:scale(.98)}
-.btn[disabled]{opacity:.5;cursor:not-allowed}
-.num{width:64px;background:#111;border:1px solid #374151;border-radius:6px;color:#e5e7eb;padding:6px 8px}
+.ctl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px
+}
+
+.btn {
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  color: #e5e7eb;
+  padding: 6px 10px;
+  cursor: pointer
+}
+
+.btn:active {
+  transform: scale(.98)
+}
+
+.btn[disabled] {
+  opacity: .5;
+  cursor: not-allowed
+}
+
+.btn2{
+  background:#1f2937;
+  border:1px solid #374151;
+  border-radius:6px;
+  color:#e5e7eb;
+  padding:10px 14px;   /* was 6px 10px */
+  font-size:20px;      /* ensure bigger text */
+  line-height:1.2;
+  cursor:pointer;
+}
+
+.btn2:active {
+  transform: scale(.98)
+}
+
+.btn2[disabled] {
+  opacity: .5;
+  cursor: not-allowed
+}
+
+.num {
+  width: 64px;
+  background: #111;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  color: #e5e7eb;
+  padding: 6px 8px
+}
 
 /* Sizing utilities used in both pages */
-.picon{width:18px;height:18px;font-size:10px}
-@media (min-width:1024px){
+.picon {
+  width: 18px;
+  height: 18px;
+  font-size: 10px
+}
+
+@media (min-width:1024px) {
+
   /* GM uses larger tokens in roster and board; override size when needed */
-  .picon.lg{width:24px;height:24px;font-size:24px}
+  .picon.lg {
+    width: 24px;
+    height: 24px;
+    font-size: 24px
+  }
 }
 
 /* Optional grid helper used by Player board */
-.grid{display:grid;gap:6px;grid-template-columns:repeat(11,minmax(20px,1fr));grid-auto-rows:minmax(20px,1fr)}
-
+.grid {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(11, minmax(20px, 1fr));
+  grid-auto-rows: minmax(20px, 1fr)
+}

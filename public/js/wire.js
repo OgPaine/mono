@@ -33,6 +33,7 @@ const DEFAULT_STATE = {
 
 export function makeWire(opts = {}){
   const listeners = [];
+  const debugListeners = new Set();
   const state = structuredClone(DEFAULT_STATE);
 
   let assignedRole = "viewer";
@@ -77,6 +78,12 @@ export function makeWire(opts = {}){
     roleListeners.add(fn);
     try { fn({ role: assignedRole, idx: assignedIdx }); } catch (err) { console.error(err); }
     return () => roleListeners.delete(fn);
+  }
+
+  function onDebug(fn){
+    if (typeof fn !== 'function') return () => {};
+    debugListeners.add(fn);
+    return () => debugListeners.delete(fn);
   }
 
   function getRole(){
@@ -131,13 +138,26 @@ export function makeWire(opts = {}){
     return `${proto}//${location.host}/ws`; // match server path
   })();
 
-  let ws = null, reconnectTimer = null;
-  function schedule(){ if(!reconnectTimer){ reconnectTimer=setTimeout(()=>{ reconnectTimer=null; connect(); },1000); } }
+  let ws = null, reconnectTimer = null, reconnectAttempts = 0;
+  function nextBackoffMs(){
+    const base = 750;
+    const max = 30_000;
+    const exp = Math.min(8, reconnectAttempts); // cap growth
+    const jitter = Math.floor(Math.random()*300);
+    return Math.min(max, Math.floor(base * Math.pow(1.8, exp)) + jitter);
+  }
+  function schedule(reason){
+    if (reconnectTimer) return;
+    const delay = nextBackoffMs();
+    if (DEBUG) log('ws:reconnect-schedule', { reason: reason||'', attempts: reconnectAttempts, delay });
+    reconnectTimer = setTimeout(()=>{ reconnectTimer=null; reconnectAttempts++; connect(); }, delay);
+  }
 
   function connect(){
     try{ ws = new WebSocket(WS_URL); } catch { schedule(); return; }
     ws.onopen = () => {
       log("ws:open", WS_URL);
+      reconnectAttempts = 0;
       const current = getRole();
       if (current.role === 'gm' || current.role === 'player'){
         const idx = current.role === 'player' ? current.idx : -1;
@@ -145,16 +165,21 @@ export function makeWire(opts = {}){
       }
     };
     ws.onerror = (e) => { log("ws:error", e?.message||e); try{ ws.close(); }catch{} };
-    ws.onclose = () => { log("ws:close"); schedule(); };
+    ws.onclose = () => { log("ws:close"); schedule('close'); };
     ws.onmessage = (ev) => {
       let msg; try{ msg = JSON.parse(ev.data); }catch{ return; }
       if (DEBUG) log("ws:msg", msg.type, msg);
       const schema = extractSchemaVersion(msg);
       if (schema && schema !== SCHEMA_VERSION) {
-        log("ws:schema-mismatch", { received: schema, expected: SCHEMA_VERSION });
-        try { localStorage.removeItem(CACHE_KEY); }catch{}
-        setTimeout(() => location.reload(), 0);
-        return;
+        // Soft-reload only when required (server ahead of client)
+        if (schema > SCHEMA_VERSION) {
+          log("ws:schema-mismatch", { received: schema, expected: SCHEMA_VERSION });
+          try { localStorage.removeItem(CACHE_KEY); }catch{}
+          setTimeout(() => location.reload(), 0);
+          return;
+        } else {
+          log("ws:schema-warning", { received: schema, expected: SCHEMA_VERSION });
+        }
       }
       const incomingRev = extractStateRev(msg);
       if (incomingRev !== null) {
@@ -228,9 +253,15 @@ export function makeWire(opts = {}){
           applyRole(payload?.role, payload?.idx);
           break;
         }
-        case "debug":
-          console.warn("[server]", msg.level||"info", msg.msg, msg.data||{});
+        case "debug": {
+          const lvl = msg.level||'info';
+          const text = String(msg.msg||'');
+          console.warn("[server]", lvl, text, msg.data||{});
+          for (const fn of debugListeners) {
+            try { fn({ level: lvl, msg: text, data: msg.data||{} }); } catch (e) { console.error(e); }
+          }
           break;
+        }
       }
     };
   }
@@ -310,8 +341,8 @@ export function makeWire(opts = {}){
   const drawCard         = (deck='chance', byIdx=null) => send({ type:"cards:draw", deck: String(deck||'chance'), by: (byIdx==null? undefined : (byIdx|0)) });
   const useGetOutOfJail  = (deck=null, byIdx=null)     => send({ type:"player:useGOJ", deck: (deck?String(deck):undefined), index: (byIdx==null? undefined : (byIdx|0)) });
 
-  if (!('wire' in window)) window.wire = { on, onRole, getRole, roleState, state, updateProperty, setPlayerName, setPlayerPos, setPlayerEnabled, setTurnOrder, setActive, nextTurn, rollDice, resetAll, setForceDoubles, drawCard, useGetOutOfJail };
+  if (!('wire' in window)) window.wire = { on, onRole, onDebug, getRole, roleState, state, updateProperty, setPlayerName, setPlayerPos, setPlayerEnabled, setTurnOrder, setActive, nextTurn, rollDice, resetAll, setForceDoubles, drawCard, useGetOutOfJail };
 
   emit();
-  return { state, on, onRole, getRole, roleState, updateProperty, setPlayerName, setPlayerPos, setPlayerEnabled, setTurnOrder, setActive, nextTurn, rollDice, resetAll, setForceDoubles, drawCard, useGetOutOfJail };
+  return { state, on, onRole, onDebug, getRole, roleState, updateProperty, setPlayerName, setPlayerPos, setPlayerEnabled, setTurnOrder, setActive, nextTurn, rollDice, resetAll, setForceDoubles, drawCard, useGetOutOfJail };
 }

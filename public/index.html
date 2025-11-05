@@ -46,7 +46,11 @@
         <label class="text-sm flex items-center gap-1">
           <input type="checkbox" v-model="oledInvert" class="accent-neutral-200"> Invert
         </label>
+        <label class="text-sm flex items-center gap-1" title="Force-set houses/hotel ignoring even-build rules">
+          <input type="checkbox" v-model="gmOverride" class="accent-neutral-200"> Override rules
+        </label>
         <button @click="resetAll" class="bg-red-700 hover:bg-red-600 px-3 py-1 rounded">Reset All</button>
+        <button onclick="window.__gmLogout && window.__gmLogout()" class="bg-neutral-700 hover:bg-neutral-600 px-3 py-1 rounded">Log out</button>
         <a href="player.html?p=1" target="_blank" class="bg-neutral-700 hover:bg-neutral-600 px-3 py-1 rounded">Open Player View</a>
       </div>
     </header>
@@ -140,10 +144,10 @@
           </div>
         </div>
 
-        <div v-else :key="'p'+(k-1)" class="tile flex flex-col gap-2" :style="gridPos(k-1)">
-          <div class="h-1.5 w-full rounded" :style="{background: colors[groupOf(k-1)]}"></div>
-          <div class="text-[12px] font-semibold leading-tight">{{ propName(k-1) }}</div>
-          <div class="text-[11px] text-neutral-400 -mt-1">{{ kindLabel(k-1) }}</div>
+        <div v-else :key="'p'+(k-1)" class="tile" :style="gridPos(k-1)">
+          <div class="topbar" :style="{background: colors[groupOf(k-1)]}">          
+            <div class="name">{{ propName(k-1) }}</div>
+              </div>
 
           <div class="grid grid-cols-2 gap-2 text-[12px]">
             <div>
@@ -190,8 +194,29 @@
         </div>
       </template>
     </section>
+    <div class="toasts">
+      <template v-for="t in toasts">
+        <div v-if="t && t.text" :key="t.id" class="toast" :class="t.level">{{ t.text }}</div>
+      </template>
+    </div>
   </div>
 
+  <style>
+    .toasts{position:fixed;right:12px;bottom:12px;display:flex;flex-direction:column;gap:8px;z-index:50}
+    .toast{background:#111;border:1px solid #333;color:#eee;padding:8px 10px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:12px;max-width:320px}
+    .toast.warn{border-color:#a16207;color:#fde68a}
+    .toast.error{border-color:#b91c1c;color:#fecaca}
+  </style>
+  
+
   <script type="module" src="./js/gm-app.js"></script>
+  <script>
+    // Simple logout helper: invalidate server session then redirect to login
+    window.__gmLogout = async function(){
+      try { await fetch('/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' } }); }
+      catch {}
+      finally { location.href = '/gm-login.html'; }
+    };
+  </script>
 </body>
 </html>

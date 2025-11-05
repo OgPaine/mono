@@ -121,3 +121,4 @@ export const CHEST_CARDS = [
   { id:'chest-beauty-contest-10',     deck:'chest',  text:'Second prize in a beauty contest – Collect $10', type:'collect', amount:10 },
   { id:'chest-inherit-100',           deck:'chest',  text:'You inherit $100',                         type:'collect', amount:100 },
 ];
+

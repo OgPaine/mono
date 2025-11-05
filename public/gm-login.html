@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>GM Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center">
+  <div class="w-full max-w-sm p-6 bg-neutral-900/60 border border-neutral-800 rounded-xl">
+    <h1 class="text-lg font-semibold mb-4">GM Login</h1>
+    <div id="msg" class="text-sm text-red-400 mb-2" style="display:none;"></div>
+    <label class="block text-sm mb-1">Password</label>
+    <input id="pw" type="password" class="w-full bg-neutral-900 border border-neutral-700 rounded px-3 py-2 mb-3" autofocus />
+    <button id="btn" class="w-full rounded px-3 py-2 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-60">Sign in</button>
+    <p class="text-xs text-neutral-400 mt-3">Three failed attempts locks login for 15 minutes.</p>
+  </div>
+
+  <script type="module">
+    const msg = document.getElementById("msg");
+    const pw = document.getElementById("pw");
+    const btn = document.getElementById("btn");
+
+    function show(text) { msg.textContent = text; msg.style.display = "block"; }
+    function hide() { msg.style.display = "none"; }
+
+    async function login() {
+      hide();
+      btn.disabled = true;
+      try {
+        const res = await fetch("/auth/gm-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: pw.value || "" }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.ok) {
+          location.href = "/gm";
+          return;
+        }
+        if (data.locked) {
+          const ms = data.remainingMs ?? 0;
+          const mins = Math.ceil(ms / 60000);
+          show(`Locked. Try again in ~${mins} minute(s).`);
+        } else if (data.attemptsLeft != null) {
+          show(`Invalid password. Attempts left: ${data.attemptsLeft}.`);
+        } else {
+          show("Login failed.");
+        }
+      } catch {
+        show("Network error.");
+      } finally {
+        btn.disabled = false;
+        pw.value = "";
+        pw.focus();
+      }
+    }
+
+    pw.addEventListener("keydown", (e) => { if (e.key === "Enter") login(); });
+    btn.addEventListener("click", login);
+  </script>
+</body>
+</html>
