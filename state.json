@@ -1,0 +1,284 @@
+{
+  "schemaVersion": 1,
+  "stateRev": 88,
+  "nameEpoch": 4,
+  "playerNames": [
+    "P1",
+    "cat sniffer",
+    "feet sniffer",
+    "P4",
+    "P5",
+    "P6"
+  ],
+  "playerPos": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "properties": [
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 1,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    },
+    {
+      "owner": 0,
+      "houses": 0,
+      "hotel": 0
+    }
+  ],
+  "dice": {
+    "a": 0,
+    "b": 0,
+    "by": -1,
+    "at": 0,
+    "seq": 0
+  },
+  "turn": {
+    "order": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "active": 0,
+    "rev": 1,
+    "doublesBy": -1,
+    "doublesCount": 0
+  },
+  "enabled": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+  ],
+  "money": [
+    1500,
+    1500,
+    1500,
+    1500,
+    1500,
+    1500
+  ],
+  "inJail": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+  ],
+  "jailTries": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "debugForceDoubles": false,
+  "cardsLast": {
+    "deck": "",
+    "id": "",
+    "text": "",
+    "by": -1,
+    "at": 0,
+    "action": ""
+  },
+  "cardsHolding": {
+    "chanceGOJ": -1,
+    "chestGOJ": -1
+  },
+  "cards": {
+    "chance": {
+      "draw": [
+        11,
+        5,
+        2,
+        8,
+        3,
+        13,
+        6,
+        4,
+        14,
+        15,
+        10,
+        0,
+        1,
+        9,
+        12,
+        7
+      ],
+      "discard": [],
+      "gojHolder": -1
+    },
+    "chest": {
+      "draw": [
+        8,
+        10,
+        3,
+        14,
+        11,
+        9,
+        16,
+        7,
+        13,
+        4,
+        2,
+        1,
+        6,
+        0,
+        5,
+        15,
+        12
+      ],
+      "discard": [],
+      "gojHolder": -1
+    },
+    "last": {
+      "deck": "",
+      "id": "",
+      "text": "",
+      "by": -1,
+      "at": 0,
+      "action": ""
+    }
+  }
+}

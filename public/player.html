@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Player — Monopoly Board</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./css/shared.css">
+  <script type="importmap">
+  { "imports": { "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js" } }
+  </script>
+  <style>
+    body{padding:12px;margin:0}
+    header{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+    header h1{font-size:16px;margin:0;font-weight:600}
+    header .spacer{flex:1}
+    .picon{width:28px;height:28px;font-size:16px}
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>Player View</h1>
+      <div class="spacer"></div>
+
+      <div class="ctl" v-if="myName">
+        <strong>{{ myName }}</strong>
+        <span>Money: ${{ myMoney }}</span>
+        <span>Pos:</span>
+        <input class="num" type="number" min="0" max="39" v-model.number="posDraft" @change="applyPosDraft">
+        <button class="btn" @click="bumpMyPos(-1)">−1</button>
+        <button class="btn" @click="bumpMyPos(1)">+1</button>
+        <button class="btn" :disabled="!isMyTurn" @click="rollMine()" title="Wait for your turn">🎲 Roll</button>
+        <button class="btn" v-if="amInJail && hasGOJ" @click="useGOJ()" title="Use Get Out of Jail Free">Use GOJ</button>
+      </div>
+
+      <div class="ctl">
+        <label>Scale
+          <select v-model.number="oledScale">
+            <option :value="2">2×</option>
+          </select>
+        </label>
+        <label><input type="checkbox" v-model="oledBold"> Bold</label>
+        <label><input type="checkbox" v-model="oledInvert"> Invert</label>
+      </div>
+    </header>
+
+    <div style="display:flex;align-items:center;gap:10px;margin:8px 0;padding:8px;border:1px solid #374151;border-radius:8px;background:#111;">
+      <div style="font-size:40px;line-height:1">{{ DICE[diceA] }} {{ DICE[diceB] }}</div>
+      <div style="font-size:13px;color:#cbd5e1">
+        Last roll: <strong>{{ lastRoller }}</strong>
+        <span v-if="(diceA||diceB)">&nbsp;= {{ (diceA||0)+(diceB||0) }}</span>
+      </div>
+      <div style="margin-left:auto;font-size:12px;color:#facc15" v-if="lastCard">
+        <span style="color:#cbd5e1">Card:</span>
+        <strong>{{ lastCard.deck==='chest' ? 'Community Chest' : 'Chance' }}</strong>
+        — {{ lastCard.text }}
+      </div>
+    </div>
+
+    <section class="grid" :data-render="renderTick">
+      <template v-for="k in 40">
+        <div v-if="boardIndexToPropIndex[k-1]==null" :key="'nb'+(k-1)" class="tile" :style="gridPos(k-1)">
+          <div class="nbtext">{{ nonBuy[k-1] || '' }}</div>
+          <div class="picons" v-if="playersAt(k-1).length">
+            <div v-for="pi in playersAt(k-1)" :key="'nbtok'+k+'-'+pi" class="picon" :class="'p'+pi" :title="state.playerNames[pi-1]">
+              {{ (state.playerNames[pi-1]||('P'+pi)).slice(0,2).toUpperCase() }}
+            </div>
+          </div>
+        </div>
+
+        <div v-else :key="'p'+(k-1)" class="tile" :style="gridPos(k-1)">
+          <div class="topbar" :style="{background: colors[groupOf(k-1)]}"></div>
+          <div class="name">{{ propName(k-1) }}</div>
+          <div class="kind">{{ kindLabel(k-1) }}</div>
+
+          <canvas class="oled"
+                  :width="64" :height="32"
+                  :style="{width:(64*oledScale)+'px',height:(32*oledScale)+'px'}"
+                  :ref="el => setCanvas(pIndex(k-1), el)"></canvas>
+          <div class="picons" v-if="playersAt(k-1).length">
+            <div v-for="pi in playersAt(k-1)" :key="'ptok'+k+'-'+pi" class="picon" :class="'p'+pi" :title="state.playerNames[pi-1]">
+              {{ (state.playerNames[pi-1]||('P'+pi)).slice(0,2).toUpperCase() }}
+            </div>
+          </div>
+        </div>
+      </template>
+    </section>
+  </div>
+
+  <script type="module" src="./js/player-app.js"></script>
+</body>
+</html>

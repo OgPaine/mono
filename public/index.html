@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>GM — Monopoly OLED Controller</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script type="importmap">
+  { "imports": { "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js" } }
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="./css/shared.css">
+  <style>
+    .picon{width:28px;height:28px;font-size:20px}
+    .disabled-row{opacity:.45;filter:saturate(.3)}
+  </style>
+</head>
+<body class="p-3">
+  <div id="app" class="flex flex-col gap-3">
+    <header class="flex flex-wrap gap-2 items-center">
+      <h1 class="text-lg font-semibold">GM / Banker</h1>
+
+      <div class="flex items-center gap-2 ml-4">
+        <span class="text-sm">Turn:</span>
+        <strong class="text-sm">{{ activeName }}</strong>
+        <label class="text-sm flex items-center gap-1 ml-2">
+          <input type="checkbox" v-model="autoMove" class="accent-neutral-200"> Move token
+        </label>
+        <label class="text-sm flex items-center gap-1 ml-2">
+          <input type="checkbox" :checked="forceDoubles" @change="toggleForceDoubles($event)" class="accent-neutral-200"> Force doubles
+        </label>
+        <button @click="doRoll" class="bg-neutral-700 hover:bg-neutral-600 px-3 py-1 rounded">
+          🎲 Roll ({{ activeName }})
+        </button>
+        <button @click="drawChance" class="bg-neutral-700 hover:bg-neutral-600 px-3 py-1 rounded">Draw Chance</button>
+        <button @click="drawChest" class="bg-neutral-700 hover:bg-neutral-600 px-3 py-1 rounded">Draw Chest</button>
+      </div>
+
+      <div class="ml-auto flex gap-2 items-center">
+        <label class="text-sm">Scale</label>
+        <select v-model.number="oledScale" class="bg-neutral-900 border border-neutral-700 rounded px-2 py-1">
+          <option :value="2">2×</option>
+        </select>
+        <label class="text-sm flex items-center gap-1">
+          <input type="checkbox" v-model="oledBold" class="accent-neutral-200"> Bold
+        </label>
+        <label class="text-sm flex items-center gap-1">
+          <input type="checkbox" v-model="oledInvert" class="accent-neutral-200"> Invert
+        </label>
+        <button @click="resetAll" class="bg-red-700 hover:bg-red-600 px-3 py-1 rounded">Reset All</button>
+        <a href="player.html?p=1" target="_blank" class="bg-neutral-700 hover:bg-neutral-600 px-3 py-1 rounded">Open Player View</a>
+      </div>
+    </header>
+
+    <!-- Shared dice tray -->
+    <div class="flex items-center gap-3 p-2 rounded border border-neutral-800 bg-neutral-900/30">
+      <div class="text-5xl leading-none">{{ DICE[diceA] }} {{ DICE[diceB] }}</div>
+      <div class="text-sm text-neutral-300">
+        Last roll:
+        <strong v-if="diceBy>=0">{{ state.playerNames[diceBy] || ('P'+(diceBy+1)) }}</strong>
+        <span v-else>—</span>
+        <span v-if="(diceA||diceB)">&nbsp;= {{ (diceA||0) + (diceB||0) }}</span>
+      </div>
+      <div class="ml-auto text-sm" v-if="lastCard">
+        <span class="text-neutral-300">Card:</span>
+        <strong>{{ lastCard.deck==='chest' ? 'Community Chest' : 'Chance' }}</strong>
+        — {{ lastCard.text }}
+        <span class="text-neutral-400">({{ state.playerNames[lastCard.by] || ('P'+(lastCard.by+1)) }})</span>
+        <span v-if="lastCard.action==='hold'" class="ml-1 text-emerald-400">[Held]</span>
+      </div>
+    </div>
+
+    <!-- Turn controls -->
+    <div class="flex flex-wrap items-center gap-2 p-2 rounded border border-neutral-800 bg-neutral-900/30">
+      <span class="text-sm">Turn order:</span>
+      <template v-for="(p,i) in order" :key="'ord'+i">
+        <button class="px-2 py-1 rounded text-sm"
+                :class="i===activeIdx ? 'bg-emerald-700' : 'bg-neutral-700'"
+                @click="setActive(i)">
+          {{ state.playerNames[p] || ('P'+(p+1)) }}
+        </button>
+      </template>
+      <button class="bg-neutral-700 px-2 py-1 rounded" @click="nextTurn(-1)">◀ Prev</button>
+      <button class="bg-neutral-700 px-2 py-1 rounded" @click="nextTurn(1)">Next ▶</button>
+    </div>
+
+    <!-- Roster -->
+    <section class="bg-neutral-900/30 border border-neutral-800 rounded p-3">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="font-semibold text-sm">Roster</h2>
+        <div class="text-xs text-neutral-300">Enabled: {{ enabledCount }} / 6</div>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        <div v-for="i in 6" :key="'roster'+i"
+             :class="['flex items-center gap-2 p-2 rounded border border-neutral-800', state.enabled[i-1] ? '' : 'disabled-row']">
+          <span class="picon" :class="'p'+i">{{ i }}</span>
+          <input class="flex-1 w-full bg-neutral-900 border border-neutral-700 rounded px-3 py-2"
+                 v-model="localNames[i-1]" :placeholder="'Player '+i">
+          <span class="text-xs tabular-nums">$ {{ (state.money?.[i-1] ?? 0) }}</span>
+          <label class="text-xs flex items-center gap-1 ml-auto">
+            <input type="checkbox" v-model="localEnabled[i-1]" @change="toggleEnabled(i-1)" class="accent-neutral-200">
+            Enabled
+          </label>
+          <button class="bg-neutral-700 px-2 rounded text-xs" @click="saveName(i-1)">Set</button>
+        </div>
+      </div>
+      <div class="mt-2 flex gap-2">
+        <button class="bg-neutral-700 px-3 py-1 rounded text-sm" @click="disable56">Disable 5 & 6</button>
+                <button class="bg-neutral-700 px-3 py-1 rounded text-sm" @click="disable26">Disable 2 - 6</button>
+        <button class="bg-neutral-700 px-3 py-1 rounded text-sm" @click="enableAll">Enable all</button>
+      </div>
+    </section>
+
+    <!-- Positions -->
+    <section class="bg-neutral-900/30 border border-neutral-800 rounded p-3">
+      <h2 class="font-semibold text-sm mb-2">Player Positions (0..39)</h2>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        <div v-for="i in 6" :key="'pos'+i" class="flex items-center gap-2"
+             :class="state.enabled[i-1] ? '' : 'disabled-row'">
+          <span class="picon" :class="'p'+i">{{ i }}</span>
+          <input class="w-full bg-neutral-900 border border-neutral-700 rounded px-2 py-2"
+                 type="number" min="0" max="39"
+                 :disabled="!state.enabled[i-1]"
+                 :value="state.playerPos[i-1]"
+                 @change="setPos(i-1, $event.target.value)">
+        </div>
+      </div>
+    </section>
+
+    <!-- Board -->
+    <section class="grid gap-1" :style="{gridTemplateColumns:'repeat(11,minmax(120px,1fr))',gridAutoRows:'minmax(190px,1fr)'}" :data-render="stateTick">
+      <template v-for="k in 40">
+        <div v-if="boardIndexToPropIndex[k-1]==null" :key="'nb'+(k-1)"
+             class="tile flex items-center justify-center text-xs"
+             :style="gridPos(k-1)">
+          {{ nonBuy[k-1] || '' }}
+          <div class="picons" v-if="playersAt(k-1).length">
+            <div v-for="pi in playersAt(k-1)" :key="'nbtok'+k+'-'+pi" class="picon" :class="'p'+pi" :title="state.playerNames[pi-1]">
+              {{ initials(pi) }}
+            </div>
+          </div>
+        </div>
+
+        <div v-else :key="'p'+(k-1)" class="tile flex flex-col gap-2" :style="gridPos(k-1)">
+          <div class="h-1.5 w-full rounded" :style="{background: colors[groupOf(k-1)]}"></div>
+          <div class="text-[12px] font-semibold leading-tight">{{ propName(k-1) }}</div>
+          <div class="text-[11px] text-neutral-400 -mt-1">{{ kindLabel(k-1) }}</div>
+
+          <div class="grid grid-cols-2 gap-2 text-[12px]">
+            <div>
+              <div class="text-neutral-400">Owner</div>
+              <select class="bg-neutral-900 border border-neutral-700 rounded px-2 py-1 w-full"
+                      v-model.number="propertyDrafts[pIndex(k-1)].owner"
+                      @change="onOwnerChange(pIndex(k-1))">
+                <option :value="0">Bank</option>
+                <option v-for="i in 6" :value="i" :disabled="!state.enabled[i-1]">
+                  {{ state.playerNames[i-1] }}
+                </option>
+              </select>
+            </div>
+            <div>
+              <div class="text-neutral-400">Houses</div>
+              <select class="bg-neutral-900 border border-neutral-700 rounded px-2 py-1 w-full"
+                      :disabled="propertyDrafts[pIndex(k-1)].hotel>0 || kindLabel(k-1)!=='Street'"
+                      v-model.number="propertyDrafts[pIndex(k-1)].houses"
+                      @change="onHousesChange(pIndex(k-1))">
+                <option v-for="h in [0,1,2,3,4]" :value="h">{{h}}</option>
+              </select>
+            </div>
+            <div class="col-span-2 flex items-center gap-2">
+              <input type="checkbox"
+                     :disabled="kindLabel(k-1)!=='Street'"
+                     :checked="propertyDrafts[pIndex(k-1)].hotel>0"
+                     @change="toggleHotel(pIndex(k-1), $event)"
+                     class="h-4 w-4 accent-neutral-200">
+              <span>Hotel (max 1)</span>
+            </div>
+          </div>
+
+          <canvas class="oled"
+                  :width="64" :height="32"
+                  :style="{width:(64*oledScale)+'px',height:(32*oledScale)+'px'}"
+                  :ref="el => setCanvas(pIndex(k-1), el)"></canvas>
+
+
+          <div class="picons" v-if="playersAt(k-1).length">
+            <div v-for="pi in playersAt(k-1)" :key="'ptok'+k+'-'+pi" class="picon" :class="'p'+pi" :title="state.playerNames[pi-1]">
+              {{ initials(pi) }}
+            </div>
+          </div>
+        </div>
+      </template>
+    </section>
+  </div>
+
+  <script type="module" src="./js/gm-app.js"></script>
+</body>
+</html>
