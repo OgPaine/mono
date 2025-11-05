@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "stateRev": 88,
-  "nameEpoch": 4,
+  "stateRev": 1035,
+  "nameEpoch": 22,
   "playerNames": [
     "P1",
-    "cat sniffer",
-    "feet sniffer",
+    "P2",
+    "P3",
     "P4",
     "P5",
     "P6"
@@ -60,19 +60,34 @@
       "hotel": 0
     },
     {
-      "owner": 0,
-      "houses": 0,
+      "owner": 1,
+      "houses": 2,
       "hotel": 0
     },
     {
-      "owner": 0,
-      "houses": 0,
+      "owner": 1,
+      "houses": 3,
       "hotel": 0
     },
     {
-      "owner": 0,
-      "houses": 0,
+      "owner": 1,
+      "houses": 3,
       "hotel": 0
+    },
+    {
+      "owner": 1,
+      "houses": 4,
+      "hotel": 0
+    },
+    {
+      "owner": 1,
+      "houses": 0,
+      "hotel": 1
+    },
+    {
+      "owner": 1,
+      "houses": 0,
+      "hotel": 1
     },
     {
       "owner": 1,
@@ -80,28 +95,13 @@
       "hotel": 0
     },
     {
-      "owner": 0,
-      "houses": 0,
+      "owner": 1,
+      "houses": 4,
       "hotel": 0
     },
     {
-      "owner": 0,
-      "houses": 0,
-      "hotel": 0
-    },
-    {
-      "owner": 0,
-      "houses": 0,
-      "hotel": 0
-    },
-    {
-      "owner": 0,
-      "houses": 0,
-      "hotel": 0
-    },
-    {
-      "owner": 0,
-      "houses": 0,
+      "owner": 1,
+      "houses": 4,
       "hotel": 0
     },
     {
@@ -161,36 +161,32 @@
     }
   ],
   "dice": {
-    "a": 0,
-    "b": 0,
-    "by": -1,
-    "at": 0,
-    "seq": 0
+    "a": 5,
+    "b": 2,
+    "by": 0,
+    "at": 1415556190,
+    "seq": 14
   },
   "turn": {
     "order": [
       0,
-      1,
-      2,
-      3,
-      4,
-      5
+      1
     ],
-    "active": 0,
-    "rev": 1,
+    "active": 1,
+    "rev": 20,
     "doublesBy": -1,
     "doublesCount": 0
   },
   "enabled": [
     true,
     true,
-    true,
-    true,
-    true,
-    true
+    false,
+    false,
+    false,
+    false
   ],
   "money": [
-    1500,
+    25750,
     1500,
     1500,
     1500,
@@ -214,60 +210,48 @@
     0
   ],
   "debugForceDoubles": false,
-  "cardsLast": {
-    "deck": "",
-    "id": "",
-    "text": "",
-    "by": -1,
-    "at": 0,
-    "action": ""
-  },
-  "cardsHolding": {
-    "chanceGOJ": -1,
-    "chestGOJ": -1
-  },
   "cards": {
     "chance": {
       "draw": [
+        15,
         11,
+        14,
+        8,
+        1,
+        7,
+        12,
+        3,
+        4,
+        13,
         5,
         2,
-        8,
-        3,
-        13,
         6,
-        4,
-        14,
-        15,
-        10,
         0,
-        1,
-        9,
-        12,
-        7
+        10,
+        9
       ],
       "discard": [],
       "gojHolder": -1
     },
     "chest": {
       "draw": [
-        8,
-        10,
-        3,
+        1,
+        12,
+        4,
+        13,
+        7,
+        0,
+        6,
+        15,
+        5,
         14,
         11,
         9,
-        16,
-        7,
-        13,
-        4,
         2,
-        1,
-        6,
-        0,
-        5,
-        15,
-        12
+        8,
+        16,
+        3,
+        10
       ],
       "discard": [],
       "gojHolder": -1
