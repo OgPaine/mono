@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+  <title>Inflatopoly Spectator</title>
+  <link rel="stylesheet" href="/styles/board.css" />
+  <link rel="stylesheet" href="/styles/shared.css" />
+  <style>
+    .path{outline:2px dashed #f59e0b; outline-offset:-2px; animation:pathPulse .6s ease-in-out infinite alternate}
+    @keyframes pathPulse { from{opacity:.6} to{opacity:1} }
+  </style>
+</head>
+<body>
+  <div class="sidebar log" style="position:fixed;right:8px;top:8px;width:260px">
+    <h3>Spectator</h3>
+    <ul id="log"></ul>
+  </div>
+
+  <div id="gameBoard" class="container stage0"></div>
+  <div id="timeline" style="position:fixed;left:8px;right:8px;bottom:8px;display:flex;gap:8px;align-items:center;background:rgba(11,18,33,.8);border:1px solid #1f2937;padding:6px 8px;border-radius:10px">
+    <button id="play" style="background:#1f2937;border:1px solid #293548;color:#e5e7eb;border-radius:8px;padding:6px 10px;cursor:pointer">Play</button>
+    <input id="scrub" type="range" min="0" max="0" value="0" style="flex:1" />
+    <span id="frameInfo" class="mini" style="color:#9ca3af"></span>
+  </div>
+
+  <script type="module">
+    import { mountBoard } from '/shared/board.js';
+
+    const VERSION = 2;
+    const params = new URLSearchParams(location.search);
+    const DEBUG = params.has('debug') || localStorage.getItem('debug')==='1';
+    const gameId = params.get('g') || 'default';
+
+    const host = document.getElementById('gameBoard');
+    const logEl = document.getElementById('log');
+
+    let board = null;
+    let pendingState = null;
+    let frames = [];
+    let evs = [];
+    let playTimer = null;
+
+    // Load shared board markup once, then mount tokens
+    fetch('/board.html')
+      .then(r => {
+        if (!r.ok) throw new Error('Failed to load board.html');
+        return r.text();
+      })
+      .then(html => {
+        host.innerHTML = html;
+        board = mountBoard(host);
+        if (pendingState) {
+          render(pendingState);
+          pendingState = null;
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        host.textContent = 'Failed to load board layout.';
+      });
+
+    let ws = null;
+    let hbTimer = null;
+    let reconnectTimer = null;
+    let backoffMs = 1000;
+    const maxBackoffMs = 10000;
+
+    const send = msg => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); };
+    let debugEl = null; const msgCounts = {}; function bump(type){ msgCounts[type]=(msgCounts[type]||0)+1; if(DEBUG&&debugEl){ const lp=localStorage.getItem(`pt:${gameId}`)||'-'; const le=localStorage.getItem(`ev:${gameId}`)||'-'; debugEl.textContent = `frames=${frames.length} patch=${lp} event=${le} | ` + Object.entries(msgCounts).map(([k,v])=>`${k}:${v}`).join(' ');} }
+
+    function scheduleReconnect(){
+      if (reconnectTimer) return;
+      const wait = backoffMs + Math.floor(Math.random()*500);
+      reconnectTimer = setTimeout(()=>{ reconnectTimer = null; connect(); }, wait);
+      backoffMs = Math.min(backoffMs * 2, maxBackoffMs);
+    }
+
+    function startHeartbeat(){
+      clearInterval(hbTimer);
+      hbTimer = setInterval(()=>{
+        send({ type:'hb', version: VERSION, gameId, clientId: localStorage.getItem('clientId') || '' });
+      }, 15000);
+    }
+
+    function connect(){
+      try { if (ws) ws.close(); } catch {}
+      ws = new WebSocket(
+        (location.protocol === 'https:' ? 'wss' : 'ws') +
+        '://' + location.host + '/ws'
+      );
+
+      ws.addEventListener('open', () => {
+        let clientId = localStorage.getItem('clientId');
+        if (!clientId) {
+          clientId = Math.random().toString(36).slice(2) + Date.now();
+          localStorage.setItem('clientId', clientId);
+        }
+        const lastEventId = Number(localStorage.getItem(`ev:${gameId}`)||'0')|0;
+        const lastPatchId = Number(localStorage.getItem(`pt:${gameId}`)||'0')|0;
+        send({ type: 'join', version: VERSION, gameId, clientId, spectator: true, acceptPatch: true, lastEventId, lastPatchId });
+        backoffMs = 1000;
+        startHeartbeat();
+      });
+
+      ws.addEventListener('close', scheduleReconnect);
+      ws.addEventListener('error', scheduleReconnect);
+
+      let needsRender = false; let rafId = 0; const scheduleRender = () => { if (needsRender) return; needsRender = true; rafId = requestAnimationFrame(()=>{ needsRender=false; if (pendingState) { render(pendingState); pendingState = null; } }); };
+
+      if (DEBUG){ debugEl=document.createElement('div'); debugEl.style.cssText='position:fixed;right:6px;bottom:6px;background:rgba(0,0,0,.6);color:#9ca3af;padding:6px;border-radius:6px;border:1px solid #334155;font:12px monospace;z-index:9999'; document.body.appendChild(debugEl); }
+      ws.addEventListener('message', ev => {
+        let m;
+        try {
+          m = JSON.parse(ev.data);
+        } catch {
+          return;
+        }
+        if (m.version && m.version !== VERSION) { bump('ver.mismatch'); return; }
+        bump(m.type||'unknown');
+        if (m.type === 'state') {
+          const st = m.payload;
+          if (!board) {
+            pendingState = st;
+          } else {
+            render(st);
+          }
+          // append to local frames for scrubbing
+          frames.push({ ts: Date.now(), rev: st.rev|0, state: st });
+          trimFrames();
+          rebuildScrubber();
+        }
+        if (m.type === 'patch') {
+          const p = m.payload||{};
+          const current = pendingState || (frames.length?stateCloneOr(frames[frames.length-1].state):null);
+          if (!current || p.kind === 'reset' || (frames.length && (p.fromRev|0) !== (frames[frames.length-1].rev|0))) {
+            // Reset current snapshot
+            pendingState = p.state || current;
+          } else if (p.kind === 'delta' && p.changes) {
+            const st = current;
+            if (st) {
+              const ch = p.changes;
+              if ('rev' in ch) st.rev = ch.rev|0;
+              if ('turn' in ch) st.turn = ch.turn|0;
+              if ('rollBlocked' in ch) st.rollBlocked = !!ch.rollBlocked;
+              if ('phase' in ch) st.phase = ch.phase;
+              if ('bank' in ch) st.bank = ch.bank;
+              if ('auction' in ch) st.auction = ch.auction;
+              if ('winner' in ch) st.winner = (ch.winner==null?null:ch.winner);
+              if ('turnExpiresAt' in ch) st.turnExpiresAt = ch.turnExpiresAt;
+              if ('turnTimer' in ch) st.turnTimer = ch.turnTimer;
+              if ('seats' in ch) st.seats = ch.seats || {};
+              if ('seatLocks' in ch) st.seatLocks = ch.seatLocks || {};
+              if (Array.isArray(ch.players)) ch.players.forEach(({i,v})=>{ st.players[i]=v; });
+              if (Array.isArray(ch.properties)) ch.properties.forEach(({i,v})=>{ st.properties[i]=v; });
+              if ('rollTray' in ch) st.rollTray = ch.rollTray;
+              if ('log' in ch) st.log = ch.log;
+              st.rev = p.toRev|0;
+              pendingState = st;
+            }
+          }
+          if (typeof p.id === 'number') localStorage.setItem(`pt:${gameId}`, String(p.id));
+          scheduleRender();
+        }
+        if (m.type === 'history') {
+          frames = Array.isArray(m.payload) ? m.payload.slice(-120) : [];
+          rebuildScrubber();
+        }
+        if (m.type === 'events') { evs = Array.isArray(m.payload) ? m.payload : []; const last = evs[evs.length-1]; if (last && typeof last.id==='number') localStorage.setItem(`ev:${gameId}`, String(last.id)); }
+        if (m.type === 'events.since') { const arr = Array.isArray(m.payload?.events) ? m.payload.events : []; const last = arr[arr.length-1]; if (last && typeof last.id==='number') localStorage.setItem(`ev:${gameId}`, String(last.id)); evs.push(...arr); while (evs.length>400) evs.shift(); }
+        if (m.type === 'event') { if (m.payload) { evs.push(m.payload); if (typeof m.payload.id==='number') localStorage.setItem(`ev:${gameId}`, String(m.payload.id)); if (evs.length > 400) evs.shift(); if (m.payload.type==='Moved') { const p=m.payload.payload||{}; try { if (typeof p.from==='number'&&typeof p.to==='number'&&typeof p.pid==='number') board.animateMove(p.pid|0, p.from|0, p.to|0, { vary: true }); } catch {} } } }
+      });
+    }
+
+    connect();
+
+    // simple state clone helper
+    function stateCloneOr(x){ try { return x ? JSON.parse(JSON.stringify(x)) : x; } catch { return x; } }
+
+    function render(st) {
+      if (!st || !board) return;
+
+      // Render tokens
+      board.render(st);
+
+      // Render log (virtualized)
+      const MAX_VIS = Number(logEl.dataset.max||'50')|0 || 50;
+      logEl.textContent = '';
+      (st.log || []).slice(0, Math.min(200, MAX_VIS)).forEach(e => {
+        const li = document.createElement('li'); li.textContent = formatLog(e, st); logEl.appendChild(li);
+      });
+      ensureLogControls();
+
+      // highlight last move path if we have an event for it (live view)
+      const frameTs = Date.now();
+      const lastMove = findLastMove(frameTs);
+      if (lastMove) highlightPath(lastMove.from|0, lastMove.to|0);
+    }
+
+    function formatLog(e, state) {
+      const name = id =>
+        state.players?.[id]?.name || `P${(id | 0) + 1}`;
+
+      switch (e.type) {
+        case 'roll':
+          return `${name(e.pid)} rolled ${e.d1}+${e.d2}=${e.total}`;
+        case 'move':
+          return `${name(e.pid)} moved to ${e.to}`;
+        case 'buy':
+          return `${name(e.pid)} bought ${idxName(e.idx)} for $${e.price}`;
+        case 'rent':
+          return `${name(e.from)} paid $${e.amount} to ${name(e.to)} (${idxName(e.idx)})`;
+        case 'card':
+          return `${name(e.pid)} drew ${e.deck === 'chance' ? 'Chance' : 'Chest'}`;
+        case 'build':
+          return `${name(e.pid)} built on ${idxName(e.idx)}`;
+        case 'sell':
+          return `${name(e.pid)} sold on ${idxName(e.idx)}`;
+        case 'mortgage':
+          return `${name(e.pid)} mortgaged ${idxName(e.idx)}`;
+        case 'unmortgage':
+          return `${name(e.pid)} unmortgaged ${idxName(e.idx)}`;
+        case 'auction.start':
+          return `Auction started: ${idxName(e.idx)}`;
+        case 'auction.bid':
+          return `${name(e.pid)} bid $${e.amount}`;
+        case 'auction.win':
+          return `${name(e.pid)} won ${idxName(e.idx)} for $${e.price}`;
+        case 'auction.none':
+          return `No bids for ${idxName(e.idx)}`;
+        case 'trade.offer':
+          return `Trade proposed`;
+        case 'trade.accept':
+          return `Trade completed`;
+        case 'trade.reject':
+          return `Trade rejected`;
+        case 'jail':
+          return `${name(e.pid)} sent to Jail`;
+        case 'jail.pay':
+          return `${name(e.pid)} paid $${e.amount || 50} to leave Jail`;
+        case 'tax':
+          return `${name(e.pid)} paid tax $${e.amount}`;
+        case 'win':
+          return `${name(e.pid)} wins`;
+        case 'timer.turn.auto':
+          return `Turn auto-ended by timer`;
+        default:
+          return e.type;
+      }
+    }
+
+    function idxName(idx) {
+      // Spectator runs on client; BOARD is not imported here to keep file simple.
+      // Log entries already contain human context; fallback to "Tile X".
+      idx = idx | 0;
+      if (idx < 0 || idx > 39) return `Tile ?`;
+      return `Tile ${idx}`;
+    }
+
+    // Timeline scrubber helpers
+    const scrub = document.getElementById('scrub');
+    const playBtn = document.getElementById('play');
+    const frameInfo = document.getElementById('frameInfo');
+    playBtn.onclick = ()=>{
+      if (playTimer) { clearInterval(playTimer); playTimer=null; playBtn.textContent='Play'; return; }
+      playBtn.textContent='Pause';
+      playTimer = setInterval(()=>{ if (Number(scrub.value) >= Number(scrub.max)) { scrub.value = '0'; } else { scrub.value = String((Number(scrub.value)|0)+1); } onScrub(); }, 1200);
+    };
+    scrub.oninput = onScrub;
+    function onScrub(){
+      const i = Number(scrub.value)|0; const f = frames[i];
+      if (!f || !board) return;
+      pendingState = null;
+      board.render(f.state);
+      // render log for frame
+      logEl.textContent=''; (f.state.log||[]).slice(0,40).forEach(e=>{ const li=document.createElement('li'); li.textContent = formatLog(e, f.state); logEl.appendChild(li); });
+      const m = findLastMove(f.ts);
+      if (m) highlightPath(m.from|0, m.to|0);
+      frameInfo.textContent = `Rev ${f.rev}`;
+    }
+    function rebuildScrubber(){ scrub.min='0'; scrub.max = String(Math.max(0, frames.length-1)); scrub.value = scrub.max; frameInfo.textContent = frames.length?`Rev ${frames[frames.length-1].rev}`:''; }
+    function trimFrames(){ while (frames.length > 120) frames.shift(); }
+    function findLastMove(ts){ let last=null; for (let i=evs.length-1;i>=0;i--){ const e=evs[i]; if (e.ts <= ts && e.type==='Moved'){ last = e.payload; break; } } return last; }
+    function highlightPath(from, to){ const added=[]; for (let i=1;i<=40;i++){ const idx=(from+i)%40; const el = document.querySelector(`[data-idx="${idx}"]`); if (el){ el.classList.add('path'); added.push(el);} if (idx === ((to%40)+40)%40) break; } setTimeout(()=> added.forEach(el=>el.classList.remove('path')), 1200); }
+
+    // Log controls
+    function ensureLogControls(){
+      if (logEl.nextSibling && logEl.nextSibling.id==='moreLogs') return;
+      const btn = document.createElement('button'); btn.id='moreLogs'; btn.textContent='Load more'; btn.style.display='block'; btn.style.margin='6px 0'; btn.onclick=()=>{ const cur=Number(logEl.dataset.max||'50')|0; const next = Math.min(200, cur+50); logEl.dataset.max=String(next); if (pendingState) render(pendingState); }; logEl.parentNode.insertBefore(btn, logEl.nextSibling);
+    }
+  </script>
+</body>
+</html>

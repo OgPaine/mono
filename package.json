@@ -1,15 +1,17 @@
 {
-  "name": "monopoly-oled",
+  "name": "mono7",
   "version": "1.0.0",
   "type": "module",
-  "private": true,
   "scripts": {
-    "start": "node server.js",
-    "test": "node --test test/*.test.js"
+    "start": "node server/index.js",
+    "test": "node server/tests/engine.test.js"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
     "express": "^4.19.2",
+    "lodash": "^4.17.21",
+    "lowdb": "^7.0.1",
+    "uuid": "^13.0.0",
     "ws": "^8.18.0"
   }
 }

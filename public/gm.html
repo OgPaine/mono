@@ -1,0 +1,633 @@
+<!-- gm.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Inflatopoly GM</title>
+  <link rel="stylesheet" href="/styles/board.css" />
+  <link rel="stylesheet" href="/styles/shared.css" />
+  <style>
+    :root { --line:#1f2937; }
+    body{background:#0b1221;color:#e5e7eb;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    .gm-topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,18,33,.9);backdrop-filter:saturate(120%) blur(6px);z-index:20}
+    .gm-left{display:flex;gap:10px;align-items:center}
+    .gm-title{font-weight:700}
+    .gm-topbar input{background:#0b1221;border:1px solid var(--line);color:#e5e7eb;border-radius:8px;padding:6px 8px}
+    .gm-topbar .btn{background:#1f2937;border:1px solid #293548;color:#e5e7eb;border-radius:8px;padding:6px 10px;cursor:pointer;text-decoration:none}
+    .gm-layout{display:grid;grid-template-columns:1fr 340px;gap:12px;padding:12px;max-width:1440px;margin:0 auto}
+    .sidebar{display:flex;flex-direction:column;gap:12px}
+    .card{background:linear-gradient(180deg,#0e1527,#0a1122);border:1px solid var(--line);border-radius:12px;padding:10px}
+    .card h3{margin:0 0 8px 0;font-size:14px;color:#cbd5e1}
+    .grid{display:grid;gap:8px}.grid.cols-2{grid-template-columns:1fr 1fr}
+    .row-gm{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .muted{color:#9ca3af;font-size:12px}
+    .kpi{display:flex;gap:10px;align-items:center;font-variant-numeric:tabular-nums}
+    .kpi span{background:#0b1221;border:1px solid var(--line);padding:4px 6px;border-radius:8px}
+    .list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto}
+    .pill{padding:2px 6px;border-radius:999px;border:1px solid var(--line);background:#0b1221;font-size:12px}
+    .danger{border-color:#7f1d1d;background:#1f0d0d;color:#fecaca}
+    .success{border-color:#064e3b;background:#062b1f;color:#bbf7d0}
+    .seat{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;border:1px solid var(--line)}
+    .seat[aria-disabled="true"]{opacity:.5;pointer-events:none}
+    .divider{height:1px;background:var(--line);margin:8px 0}
+    .log{max-height:220px;overflow:auto}
+  </style>
+</head>
+<body>
+  <header class="gm-topbar">
+    <div class="gm-left">
+      <div class="gm-title">Inflatopoly • GM</div>
+      <div class="kpi"><span id="turnKpi">Turn: -</span><span id="diceKpi">Dice: -</span><span id="phaseKpi">Phase: -</span></div>
+    </div>
+    <div class="row-gm">
+      <label class="muted">Game ID <input id="gid" value="default" /></label>
+      <a id="spectateLink" class="btn" href="#">Spectate</a>
+      <button id="copyGm" class="btn">Copy GM URL</button>
+    </div>
+  </header>
+
+  <main class="gm-layout">
+    <section>
+      <!-- INLINE BOARD START -->
+      <div id="gameBoard" class="container stage0">
+        <!-- 20: Free Parking -->
+        <div class="corner" data-idx="20">
+          <div class="parking">
+            <h2>FREE</h2>
+            <img src="/images/parking.svg" class="parkingCar" alt="Free Parking">
+            <span>PARKING</span>
+          </div>
+          <div class="tile-tokens"></div>
+        </div>
+
+        <!-- 21-29 along top edge -->
+        <div class="gameRow top">
+          <div class="row">
+            <div class="space" data-idx="29"><div class="property yellow"></div><h3>MARVIN<br>GARDENS</h3><h3>$280</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="28"><h3>WATER<br>WORKS</h3><img class="rr" src="/images/waterWorks.svg" alt="Water Works"><h3>$150</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="27"><div class="property yellow"></div><h3>VENTNOR<br>AVENUE</h3><h3>$260</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="26"><div class="property yellow"></div><h3>ATLANTIC<br>AVENUE</h3><h3>$260</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="25"><h3>B. &amp; O.<br>RAILROAD</h3><img class="rr" src="/images/train.svg" alt="B. & O. Railroad"><h3>$200</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="24"><div class="property red"></div><h3>ILLINOIS<br>AVENUE</h3><h3>$240</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="23"><div class="property red"></div><h3>INDIANA<br>AVENUE</h3><h3>$220</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="22"><h3>CHANCE</h3><img class="chance" src="/images/chance.svg" alt="Chance"><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="21"><div class="property red"></div><h3>KENTUCKY<br>AVENUE</h3><h3>$220</h3><div class="tile-tokens"></div></div>
+          </div>
+        </div>
+
+        <!-- 30: Go To Jail -->
+        <div class="corner" data-idx="30">
+          <div class="goToJail"><h2>GO TO</h2><img class="policeMan" src="/images/goToJail.svg" alt="Go To Jail"><h2>JAIL</h2></div>
+          <div class="tile-tokens"></div>
+        </div>
+
+        <!-- 19-11 -->
+        <div class="gameRow left">
+          <div class="row">
+            <div class="space" data-idx="19"><div class="property orange"></div><h3>NEW YORK<br>AVENUE</h3><h3>$200</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="18"><div class="property orange"></div><h3>TENNESSEE<br>AVENUE</h3><h3>$180</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="17"><h3>COMMUNITY<br>CHEST</h3><img class="chest" src="/images/chest.svg" alt="Community Chest"><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="16"><div class="property orange"></div><h3>ST. JAMES<br>PLACE</h3><h3>$180</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="15"><h3>PENNSYLVANIA<br>RAILROAD</h3><img class="rr" src="/images/train.svg" alt="Pennsylvania Railroad"><h3>$200</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="14"><div class="property magenta"></div><h3>VIRGINIA<br>AVENUE</h3><h3>$160</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="13"><div class="property magenta"></div><h3>STATES<br>AVENUE</h3><h3>$140</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="12"><h3>ELECTRIC<br>COMPANY</h3><img class="electric" src="/images/electric.svg" alt="Electric Company"><h3>$150</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="11"><div class="property magenta"></div><h3>ST. CHARLES<br>PLACE</h3><h3>$140</h3><div class="tile-tokens"></div></div>
+          </div>
+        </div>
+
+        <!-- Center -->
+        <div class="center">
+          <div class="top"><div class="cardCase"><h1>COMMUNITY CHEST</h1><div class="cChestCards"></div></div></div>
+          <div><img class="logo" src="/images/MonopolyLogo.svg" alt="Logo"></div>
+          <div class="bottom"><div></div><div class="cardCase"><h1>CHANCE</h1><div class="chanceCards"></div></div></div>
+        </div>
+
+        <!-- 39-31 -->
+        <div class="gameRow right">
+          <div class="row">
+            <div class="space" data-idx="39"><div class="property blue"></div><h3>BOARDWALK</h3><h3>$400</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="38"><h2>LUXURY<br>TAX</h2><img class="luxury" src="/images/luxury.svg" alt="Luxury Tax"><h3>$100</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="37"><div class="property blue"></div><h3>PARK<br>PLACE</h3><h3>$350</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="36"><h3>CHANCE</h3><img class="chance" src="/images/chance.svg" alt="Chance"><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="35"><h3>SHORT<br>LINE</h3><img class="rr" src="/images/train.svg" alt="Short Line"><h3>$200</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="34"><div class="property green"></div><h3>PENNSYLVANIA<br>AVENUE</h3><h3>$320</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="33"><h3>COMMUNITY<br>CHEST</h3><img class="chest" src="/images/chest.svg" alt="Community Chest"><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="32"><div class="property green"></div><h3>NORTH CAROLINA<br>AVENUE</h3><h3>$300</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="31"><div class="property green"></div><h3>PACIFIC<br>AVENUE</h3><h3>$300</h3><div class="tile-tokens"></div></div>
+          </div>
+        </div>
+
+        <!-- 10: Jail -->
+        <div class="corner jail" data-idx="10">
+          <h1 class="h1down">JUST</h1>
+          <div class="jailBlock"><img class="prisoner" src="/images/prisoner.svg" alt="In Jail"></div>
+          <h1 class="visit">VISITING</h1>
+          <div class="tile-tokens"></div>
+        </div>
+
+        <!-- 9-1 -->
+        <div class="gameRow bottom">
+          <div class="row">
+            <div class="space" data-idx="9"><div class="property lightBlue"></div><h3>CONNECTICUT<br>AVENUE</h3><h3>$120</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="8"><div class="property lightBlue"></div><h3>VERMONT<br>AVENUE</h3><h3>$100</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="7"><h3>CHANCE</h3><img class="chance" src="/images/chance.svg" alt="Chance"><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="6"><div class="property lightBlue"></div><h3>ORIENTAL<br>AVENUE</h3><h3>$100</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="5"><h3>READING<br>RAILROAD</h3><img class="rr" src="/images/train.svg" alt="Reading Railroad"><h3>$200</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="4"><h2>INCOME<br>TAX</h2><img class="income" src="/images/diamond.svg" alt="Income Tax"><h3>$200</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="3"><div class="property brown"></div><h3>BALTIC<br>AVENUE</h3><h3>$60</h3><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="2"><h3>COMMUNITY<br>CHEST</h3><img class="chest" src="/images/chest.svg" alt="Community Chest"><div class="tile-tokens"></div></div>
+            <div class="space" data-idx="1"><div class="property brown"></div><h3>MEDITERRANEAN<br>AVENUE</h3><h3>$60</h3><div class="tile-tokens"></div></div>
+          </div>
+        </div>
+
+        <!-- 0: GO -->
+        <div class="corner go" data-idx="0">
+          <div class="start"><h3>COLLECT $200 SALARY AS YOU PASS</h3><img class="goSvg" src="/images/go.svg" alt="GO"></div>
+          <div class="tile-tokens"></div>
+        </div>
+      </div>
+      <!-- INLINE BOARD END -->
+    </section>
+
+    <aside class="sidebar">
+      <div class="card">
+        <h3>Lobby & Seats</h3>
+        <div class="row-gm muted">Join links auto-disable.</div>
+        <ul id="seatList" class="list"></ul>
+        <div class="row-gm">
+          <input id="assignCid" placeholder="clientId" style="flex:1" />
+          <input id="assignPid" type="number" min="0" max="5" value="0" style="width:4em" />
+          <button id="assignBtn" class="btn">Assign</button>
+          <button id="unassignBtn" class="btn">Unassign</button>
+        </div>
+        <div class="row-gm">
+          <input id="swapA" type="number" min="0" max="5" placeholder="a" style="width:4em" />
+          <input id="swapB" type="number" min="0" max="5" placeholder="b" style="width:4em" />
+          <button id="swapBtn" class="btn">Swap</button>
+        </div>
+        <div class="row-gm">
+          <span class="muted">Seat tools</span>
+          <button id="lockSeat" class="btn">Lock</button>
+          <button id="unlockSeat" class="btn">Unlock</button>
+          <button id="addBot" class="btn">Add Bot</button>
+          <button id="removeBot" class="btn">Remove Bot</button>
+        </div>
+      </div>
+
+      <div class="card grid cols-2">
+        <div>
+          <h3>Turn Control</h3>
+          <div class="row-gm muted">Target player: <select id="targetPid"></select></div>
+          <div class="row-gm">
+            <button id="btnRoll" class="btn">Force roll</button>
+            <button id="btnEnd" class="btn">Force end</button>
+          </div>
+          <div class="row-gm">
+            <button id="btnDisable" class="btn">Disable</button>
+            <button id="btnEnable" class="btn">Enable</button>
+          </div>
+          <div class="divider"></div>
+          <label class="row-gm muted">Block rolls <input id="block" type="checkbox" /></label>
+          <div class="row-gm muted">
+            <span>Next roll</span>
+            <input id="d1" type="number" min="1" max="6" style="width:3em" /> +
+            <input id="d2" type="number" min="1" max="6" style="width:3em" />
+            <button id="setRoll" class="btn">Set</button>
+          </div>
+          <div class="row-gm muted">
+            <span>Goto idx</span>
+            <input id="gotoIdx" type="number" min="0" max="39" style="width:4em" />
+            <button id="gotoBtn" class="btn">Go</button>
+          </div>
+          <div class="row-gm muted">
+            <span>Undo</span>
+            <input id="undoN" type="number" value="1" min="1" style="width:4em" />
+            <button id="undoBtn" class="btn">Undo N</button>
+          </div>
+          <div class="row-gm muted">
+            <span>Turn timer</span>
+            <input id="timerOn" type="checkbox" />
+            <input id="timerSec" type="number" value="60" style="width:4em" />s
+            <button id="applyTimer" class="btn">Apply</button>
+          </div>
+        </div>
+        <div>
+          <h3>Bank & Debug</h3>
+          <div class="row-gm muted">
+            <span>Give cash</span>
+            <select id="cashPid"></select>
+            <input id="cashDelta" type="number" style="width:6em" placeholder="+/-" />
+            <button id="giveCash" class="btn">Apply</button>
+          </div>
+          <div class="row-gm muted">
+            <button id="finishAuction" class="btn">Finish auction</button>
+            <button id="resetGame" class="btn danger">Reset</button>
+          </div>
+          <div class="row-gm muted"><button id="rotate" class="btn">Rotate board</button></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Players</h3>
+        <ul id="players" class="list"></ul>
+        <div class="row-gm muted">
+          <span>Edit profile</span>
+          <select id="profilePid"></select>
+          <input id="profileName" placeholder="name" />
+          <input id="profileColor" placeholder="#color" style="width:8em" />
+          <button id="applyProfile" class="btn">Apply</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Deck Inspector</h3>
+        <div class="grid cols-2">
+          <div>
+            <div class="row-gm"><strong>Chance</strong></div>
+            <ol id="chancePeek" class="list"></ol>
+            <div class="row-gm">
+              <button id="chanceBurn" class="btn">Burn Top</button>
+              <input id="chanceInsertIdx" type="number" placeholder="#" style="width:5em" />
+              <button id="chanceInsert" class="btn">Insert Top</button>
+            </div>
+          </div>
+          <div>
+            <div class="row-gm"><strong>Chest</strong></div>
+            <ol id="chestPeek" class="list"></ol>
+            <div class="row-gm">
+              <button id="chestBurn" class="btn">Burn Top</button>
+              <input id="chestInsertIdx" type="number" placeholder="#" style="width:5em" />
+              <button id="chestInsert" class="btn">Insert Top</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Recent log</h3>
+        <ul id="log" class="list log"></ul>
+      </div>
+    </aside>
+  </main>
+
+  <script type="module">
+    import { mountBoard } from '/shared/board.js';
+    import { BOARD, CHANCE_CARDS, CHEST_CARDS } from '/shared/props-data.js';
+
+    const params = new URLSearchParams(location.search);
+    const gidInput = document.getElementById('gid');
+    gidInput.value = params.get('g') || 'default';
+
+    const board = mountBoard(document.getElementById('gameBoard'));
+    const turnKpi = document.getElementById('turnKpi');
+    const diceKpi = document.getElementById('diceKpi');
+    const phaseKpi = document.getElementById('phaseKpi');
+    const playersEl = document.getElementById('players');
+    const logEl = document.getElementById('log');
+    const seatList = document.getElementById('seatList');
+
+    let ws = null;
+    let hbTimer = null;
+    let reconnectTimer = null;
+    let backoffMs = 1000;
+    const maxBackoffMs = 10000;
+    const send = (msg)=>{ if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); };
+
+    let state = null;
+    let gmState = { decks: { chance: [], chest: [], discards: {} } };
+    let rotation = 0;
+
+    function join() {
+      const gameId = gidInput.value || 'default';
+      const gmToken = localStorage.getItem('gmToken') || '';
+      send({ type:'join', pid:0, version: 2, gameId, clientId:'gm', gmToken });
+      document.getElementById('spectateLink').href = `/spectator.html?g=${encodeURIComponent(gameId)}`;
+      document.getElementById('copyGm').onclick = () => navigator.clipboard.writeText(`${location.origin}/gm.html?g=${encodeURIComponent(gameId)}`);
+    }
+
+    function scheduleReconnect(){
+      if (reconnectTimer) return;
+      const wait = backoffMs + Math.floor(Math.random()*500);
+      reconnectTimer = setTimeout(()=>{ reconnectTimer = null; connect(); }, wait);
+      backoffMs = Math.min(backoffMs * 2, maxBackoffMs);
+    }
+
+    function startHeartbeat(){
+      clearInterval(hbTimer);
+      hbTimer = setInterval(()=>{
+        const gameId = gidInput.value || 'default';
+        const gmToken = localStorage.getItem('gmToken') || '';
+        send({ type:'hb', version: 2, gameId, clientId:'gm', gmToken });
+      }, 15000);
+    }
+
+    const DEBUG = (new URLSearchParams(location.search)).has('debug') || localStorage.getItem('debug')==='1';
+    let debugEl = null; const msgCounts = {}; function bump(type){ msgCounts[type]=(msgCounts[type]||0)+1; if(DEBUG&&debugEl){ debugEl.textContent = `rev=${state?.rev||'-'} | ` + Object.entries(msgCounts).map(([k,v])=>`${k}:${v}`).join(' ');} }
+
+    function connect(){
+      try { if (ws) ws.close(); } catch {}
+      ws = new WebSocket((location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/ws');
+      ws.addEventListener('open', ()=>{ backoffMs = 1000; join(); startHeartbeat(); if (DEBUG && !debugEl){ debugEl=document.createElement('div'); debugEl.style.cssText='position:fixed;right:6px;bottom:6px;background:rgba(0,0,0,.6);color:#9ca3af;padding:6px;border-radius:6px;border:1px solid #334155;font:12px monospace;z-index:9999'; document.body.appendChild(debugEl);} });
+      ws.addEventListener('close', scheduleReconnect);
+      ws.addEventListener('error', scheduleReconnect);
+      ws.addEventListener('message', ev => {
+        let m; try { m = JSON.parse(ev.data) } catch { return; }
+        bump(m.type||'unknown');
+        if (m.type === 'state') { state = m.payload; render(); }
+        if (m.type === 'gm') { gmState = m.payload || gmState; renderDeckPreview(); }
+      });
+    }
+
+    gidInput.addEventListener('change', ()=>{
+      history.replaceState(null, '', `/gm.html?g=${encodeURIComponent(gidInput.value||'default')}`);
+      join();
+    });
+
+    connect();
+
+    document.getElementById('btnRoll').onclick = () => turnAction('roll');
+    document.getElementById('btnEnd').onclick  = () => turnAction('endTurn');
+    document.getElementById('btnDisable').onclick = () => toggleDisable(true);
+    document.getElementById('btnEnable').onclick  = () => toggleDisable(false);
+    function turnAction(type){
+      if (!state) return;
+      send({ type, pid: state.turn, version: 2, gameId: gidInput.value || 'default' });
+    }
+    function toggleDisable(setTo){
+      if (!state) return;
+      const pidSel = document.getElementById('targetPid');
+      const pid = (pidSel && (pidSel.value|0)) || (state.turn|0);
+      send({ type:'admin.player.disable', version: 2, gameId: gidInput.value || 'default', pid, setTo });
+    }
+
+    const blockEl = document.getElementById('block');
+    blockEl.onchange = () => send({ type:'set', key:'rollBlocked', value:blockEl.checked, version: 2, gameId: gidInput.value || 'default' });
+
+    document.getElementById('setRoll').onclick = () => send({
+      type:'debug.roll', version: 2, gameId: gidInput.value || 'default',
+      d1: (document.getElementById('d1').value | 0),
+      d2: (document.getElementById('d2').value | 0)
+    });
+
+    document.getElementById('gotoBtn').onclick = () => send({
+      type:'debug.goto', version: 2, gameId: gidInput.value || 'default',
+      idx: (document.getElementById('gotoIdx').value | 0)
+    });
+
+    document.getElementById('undoBtn').onclick = () => send({
+      type:'admin.undo', version: 2, gameId: gidInput.value || 'default',
+      n: (document.getElementById('undoN').value | 0) || 1
+    });
+
+    document.getElementById('giveCash').onclick = () => send({
+      type:'debug.cash', version: 2, gameId: gidInput.value || 'default',
+      pid: (document.getElementById('cashPid').value | 0),
+      delta: (document.getElementById('cashDelta').value | 0)
+    });
+
+    document.getElementById('applyTimer').onclick = () => send({
+      type:'set', key:'turnTimer', version: 2, gameId: gidInput.value || 'default',
+      enabled: document.getElementById('timerOn').checked,
+      durationSec: (document.getElementById('timerSec').value | 0)
+    });
+
+    document.getElementById('finishAuction').onclick = () => send({ type:'auction.finish', version: 2, gameId: gidInput.value || 'default' });
+    document.getElementById('resetGame').onclick   = () => send({ type:'debug.reset', version: 2, gameId: gidInput.value || 'default' });
+
+    document.getElementById('rotate').onclick = () => {
+      rotation = (rotation + 90) % 360;
+      const el = document.getElementById('gameBoard');
+      ['stage0','stage90','stage180','stage270','stage360'].forEach(c=>el.classList.remove(c));
+      el.classList.add(`stage${rotation}`);
+    };
+
+    function render() {
+      if (!state) return;
+      board.render(state);
+
+      turnKpi.textContent = `Turn: P${(state.turn|0)+1}`;
+      const last = state.rollTray?.[0];
+      diceKpi.textContent = `Dice: ${last ? `${last.d1}+${last.d2}=${last.total}` : '-'}`;
+      phaseKpi.textContent = `Phase: ${state.phase || '-'}`;
+
+      blockEl.checked = !!state.rollBlocked;
+
+      const cashSel = document.getElementById('cashPid');
+      cashSel.textContent = '';
+      const targetSel = document.getElementById('targetPid');
+      const profileSel = document.getElementById('profilePid');
+      targetSel.textContent = '';
+      profileSel.textContent = '';
+      (state.players || []).forEach(p => {
+        if (!p) return;
+        const o1=document.createElement('option'); o1.value=p.id; o1.textContent=p.name; cashSel.appendChild(o1);
+        const o2=document.createElement('option'); o2.value=p.id; o2.textContent=p.name; targetSel.appendChild(o2);
+        const o3=document.createElement('option'); o3.value=p.id; o3.textContent=p.name; profileSel.appendChild(o3);
+      });
+
+      playersEl.textContent = '';
+      (state.players || []).forEach(p => {
+        if (!p) return;
+        const li = document.createElement('li');
+        const disabledTag = (state.disabled && state.disabled[p.id]) ? ' <span class="pill danger">Disabled</span>' : '';
+        li.innerHTML = `<span class=\"pill\">${p.name}</span><span class=\"pill\">$${p.cash}</span>${disabledTag}`;
+        playersEl.appendChild(li);
+      });
+
+      renderSeats();
+      renderDeckPreview();
+      renderLog();
+      attachTileInteractions();
+      updateTimerCue();
+    }
+
+    function renderSeats(){
+      const gameId = gidInput.value || 'default';
+      const encId = encodeURIComponent(gameId);
+      seatList.textContent = '';
+      for (let i=0;i<6;i++){
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.className = 'seat';
+        const taken = !!(state.seats && state.seats[i]);
+        const who = state.players?.[i]?.name || `P${i+1}`;
+        if (taken){ a.setAttribute('aria-disabled','true'); a.href = '#'; }
+        else { a.href = `/player.html?g=${encId}&p=${i}`; a.target = '_blank'; a.rel='noopener'; }
+        a.innerHTML = `<span>${who}</span><span class="pill ${taken?'danger':'success'}">${taken?'Taken':'Open'}</span>`;
+        li.appendChild(a);
+        seatList.appendChild(li);
+      }
+    }
+
+    function renderDeckPreview(){
+      const chanceBox = document.getElementById('chancePeek');
+      const chestBox = document.getElementById('chestPeek');
+      chanceBox.textContent=''; chestBox.textContent='';
+      const take = (arr)=> (arr||[]).slice(0,3);
+      const chanceTop = take(gmState.decks?.chance||[]);
+      const chestTop = take(gmState.decks?.chest||[]);
+      const renderList = (box, arr, isChance) => {
+        arr.forEach((idx, i)=>{
+          const li=document.createElement('li');
+          const label = (isChance ? CHANCE_CARDS : CHEST_CARDS)[idx]?.label || `#${idx}`;
+          li.innerHTML = `<span class="pill">${i+1}</span> ${label} <span style="margin-left:auto"></span>`;
+          const up = document.createElement('button'); up.textContent='↑'; up.className='btn'; up.onclick=()=>reorderTop(isChance?'chance':'chest', i, i-1);
+          const down = document.createElement('button'); down.textContent='↓'; down.className='btn'; down.onclick=()=>reorderTop(isChance?'chance':'chest', i, i+1);
+          const burn = document.createElement('button'); burn.textContent='Burn'; burn.className='btn'; burn.onclick=()=>send({ type:'admin.deck.burnTop', version: 2, gameId: gidInput.value||'default', deck: isChance?'chance':'chest', n:1 });
+          const span = li.querySelector('span:last-child');
+          span.appendChild(up); span.appendChild(down); span.appendChild(burn);
+          box.appendChild(li);
+        });
+      };
+      renderList(chanceBox, chanceTop, true);
+      renderList(chestBox, chestTop, false);
+    }
+
+    function reorderTop(deck, from, to){
+      const arr = (gmState.decks?.[deck]||[]).slice(0,3);
+      if (to < 0 || to >= arr.length) return;
+      const [m] = arr.splice(from,1);
+      arr.splice(to,0,m);
+      send({ type:'admin.deck.reorderTop', version: 2, gameId: gidInput.value||'default', deck, top: arr });
+    }
+
+    document.getElementById('chanceBurn').onclick = ()=> send({ type:'admin.deck.burnTop', version: 2, gameId: gidInput.value||'default', deck:'chance', n:1 });
+    document.getElementById('chestBurn').onclick = ()=> send({ type:'admin.deck.burnTop', version: 2, gameId: gidInput.value||'default', deck:'chest', n:1 });
+    document.getElementById('chanceInsert').onclick = ()=>{
+      const v = (document.getElementById('chanceInsertIdx').value|0);
+      send({ type:'admin.deck.insertTop', version: 2, gameId: gidInput.value||'default', deck:'chance', idx:v });
+    };
+    document.getElementById('chestInsert').onclick = ()=>{
+      const v = (document.getElementById('chestInsertIdx').value|0);
+      send({ type:'admin.deck.insertTop', version: 2, gameId: gidInput.value||'default', deck:'chest', idx:v });
+    };
+
+    document.getElementById('assignBtn').onclick = ()=>{
+      const clientId = document.getElementById('assignCid').value.trim();
+      const pid = (document.getElementById('assignPid').value|0);
+      send({ type:'admin.seat.assign', version: 2, gameId: gidInput.value||'default', clientId, pid });
+    };
+    document.getElementById('unassignBtn').onclick = ()=>{
+      const pid = (document.getElementById('assignPid').value|0);
+      send({ type:'admin.seat.unassign', version: 2, gameId: gidInput.value||'default', pid });
+    };
+    document.getElementById('swapBtn').onclick = ()=>{
+      const a = (document.getElementById('swapA').value|0);
+      const b = (document.getElementById('swapB').value|0);
+      send({ type:'admin.seat.swap', version: 2, gameId: gidInput.value||'default', a, b });
+    };
+
+    document.getElementById('lockSeat').onclick = ()=>{
+      const pid = (document.getElementById('assignPid').value|0);
+      send({ type:'admin.seat.lock', version: 2, gameId: gidInput.value||'default', pid, setTo:true });
+    };
+    document.getElementById('unlockSeat').onclick = ()=>{
+      const pid = (document.getElementById('assignPid').value|0);
+      send({ type:'admin.seat.lock', version: 2, gameId: gidInput.value||'default', pid, setTo:false });
+    };
+    document.getElementById('addBot').onclick = ()=>{
+      const pid = (document.getElementById('assignPid').value|0);
+      send({ type:'admin.bot.add', version: 2, gameId: gidInput.value||'default', pid });
+    };
+    document.getElementById('removeBot').onclick = ()=>{
+      const pid = (document.getElementById('assignPid').value|0);
+      send({ type:'admin.bot.remove', version: 2, gameId: gidInput.value||'default', pid });
+    };
+
+    document.getElementById('applyProfile').onclick = ()=>{
+      const pid = (document.getElementById('profilePid').value|0);
+      const name = document.getElementById('profileName').value;
+      const color = document.getElementById('profileColor').value;
+      if (name) send({ type:'admin.player.rename', version: 2, gameId: gidInput.value||'default', pid, name });
+      if (color) send({ type:'admin.player.color', version: 2, gameId: gidInput.value||'default', pid, color });
+    };
+
+    function attachTileInteractions(){
+      const host = document.getElementById('gameBoard');
+      host.querySelectorAll('[data-idx]').forEach(el => {
+        const idx = Number(el.getAttribute('data-idx'))|0;
+        el.onclick = (e)=> {
+          e.preventDefault(); e.stopPropagation();
+          showTileMenu(el, idx);
+        };
+        el.title = rentBreakdown(idx);
+      });
+      document.body.onclick = ()=> hideTileMenu();
+    }
+
+    let menuEl = null;
+    function hideTileMenu(){ if (menuEl) { menuEl.remove(); menuEl = null; } }
+    function showTileMenu(anchor, idx){
+      hideTileMenu();
+      const rect = anchor.getBoundingClientRect();
+      const m = document.createElement('div');
+      m.style.position='fixed'; m.style.left=`${rect.left}px`; m.style.top=`${rect.top}px`; m.style.zIndex='100'; m.style.background='#0e1527'; m.style.border='1px solid #1f2937'; m.style.borderRadius='8px'; m.style.padding='6px';
+      const pid = Number(document.getElementById('targetPid').value|0) || (state.turn|0);
+      const addBtn = (label, fn)=>{ const b=document.createElement('button'); b.textContent=label; b.className='btn'; b.style.margin='2px'; b.onclick=(e)=>{ e.stopPropagation(); fn(); hideTileMenu(); }; m.appendChild(b); };
+      addBtn('Teleport', ()=> send({ type:'admin.player.move', version: 2, gameId: gidInput.value||'default', pid, idx, payGo:false }));
+      addBtn('Buy', ()=> send({ type:'admin.prop.buy', version: 2, gameId: gidInput.value||'default', pid, idx }));
+      addBtn('Start auction', ()=> send({ type:'admin.auction.start', version: 2, gameId: gidInput.value||'default', idx }));
+      addBtn('Build +1', ()=> send({ type:'admin.prop.setHouses', version: 2, gameId: gidInput.value||'default', idx, houses: Math.min(5, ((state.properties?.[idx]?.houses|0)+1)) }));
+      addBtn('Remove -1', ()=> send({ type:'admin.prop.setHouses', version: 2, gameId: gidInput.value||'default', idx, houses: Math.max(0, ((state.properties?.[idx]?.houses|0)-1)) }));
+      addBtn('Mortgage', ()=> send({ type:'admin.prop.mortgage', version: 2, gameId: gidInput.value||'default', idx, setTo:true }));
+      addBtn('Unmortgage', ()=> send({ type:'admin.prop.mortgage', version: 2, gameId: gidInput.value||'default', idx, setTo:false }));
+      addBtn('Set rent…', ()=>{
+        const v = prompt('Override rent for this tile (empty to clear):');
+        if (v===null) return;
+        const amount = v.trim()==='' ? null : (Number(v)|0);
+        const payload = { type:'admin.prop.setRent', version: 2, gameId: gidInput.value||'default', idx };
+        if (amount==null) { /* clear */ }
+        else Object.assign(payload, { amount });
+        send(payload);
+      });
+      document.body.appendChild(m); menuEl = m;
+    }
+
+    function rentBreakdown(idx){
+      const sq = BOARD[idx]; if (!sq) return '';
+      const deed = state.properties?.[idx];
+      if (sq.kind==='street'){
+        const h = deed?.houses|0; const base = sq.rent?.[0]||0; const group = sq.group;
+        const groupCount = BOARD.filter(s=> s && s.kind==='street' && s.group===group).length;
+        const setOwned = state.properties && (state.properties.filter((d,i)=> BOARD[i]?.group===group && d?.owner===deed?.owner).length === groupCount);
+        if (h===0){ const dbl = setOwned? base*2: base; return `Rent: base ${base}${setOwned?' ×2 set':''} = ${dbl}`; }
+        const tiers = ['1h','2h','3h','4h','hotel'];
+        const val = sq.rent?.[Math.min(h,5)]||0;
+        return `Rent: ${tiers[Math.min(h,5)-1] || ''} = ${val}`;
+      }
+      if (sq.kind==='rr'){
+        let n=0; (state.properties||[]).forEach((d,i)=>{ if (BOARD[i]?.kind==='rr' && d?.owner===deed?.owner) n++;});
+        return `Rent: RR x${n}`;
+      }
+      if (sq.kind==='util'){
+        return `Rent: Util × (dice)`;
+      }
+      return '';
+    }
+
+    // Timer cue
+    let lastCueSecond = null; let beepCtx = null;
+    function playBeep(){
+      try{
+        beepCtx ||= new (window.AudioContext||window.webkitAudioContext)();
+        const o = beepCtx.createOscillator(); const g = beepCtx.createGain();
+        o.type='sine'; o.frequency.value=880; g.gain.value=0.05; o.connect(g); g.connect(beepCtx.destination);
+        o.start(); setTimeout(()=>{ try{ o.stop(); }catch{} }, 120);
+      }catch{}
+    }
+    function updateTimerCue(){
+      const ts = state?.turnExpiresAt|0; if (!ts) return;
+      const left = Math.ceil((ts - Date.now())/1000);
+      if (left <= 5 && left >= 0 && left !== lastCueSecond){ lastCueSecond = left; playBeep(); }
+    }
+    setInterval(()=> updateTimerCue(), 500);
+
+    function renderLog(){
+      const box = logEl; box.textContent='';
+      (state.log||[]).slice(0,40).forEach(e=>{ const li=document.createElement('li'); li.textContent = e.type; box.appendChild(li); });
+    }
+  </script>
+</body>
+</html>

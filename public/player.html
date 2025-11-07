@@ -1,158 +1,531 @@
+<!-- player.html -->
 <!doctype html>
 <html lang="en">
-
 <head>
   <meta charset="utf-8" />
-  <title>Player — Monopoly Board</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="./css/shared.css">
-  <script type="importmap">
-  { "imports": { "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.prod.js" } }
-  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Inflatopoly Player</title>
+  <link rel="stylesheet" href="/styles/board.css" />
+  <link rel="stylesheet" href="/styles/shared.css" />
   <style>
-    body {
-      padding: 12px;
-      margin: 0
-    }
-
-    header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 12px;
-      flex-wrap: wrap
-    }
-
-    header h1 {
-      font-size: 16px;
-      margin: 0;
-      font-weight: 600
-    }
-
-    header .spacer {
-      flex: 1
-    }
-
-    .picon {
-      width: 28px;
-      height: 28px;
-      font-size: 16px
-    }
+    body{background:#0b1221;color:#e5e7eb;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    #hud{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px;border-bottom:1px solid #1f2937;position:sticky;top:0;background:#0b1221;z-index:10}
+    #hud .pill{border:1px solid #293548;background:#0b1221;padding:4px 6px;border-radius:8px;font-variant-numeric:tabular-nums}
+    #hud button{background:#1f2937;border:1px solid #293548;color:#e5e7eb;border-radius:8px;padding:6px 10px;cursor:pointer}
+    #error{color:#fca5a5;font-weight:600}
+    .overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(2px);z-index:50}
+    .overlay .panel{background:#0e1527;border:1px solid #1f2937;padding:16px;border-radius:12px;max-width:520px}
+    .mini{font-size:12px;color:#9ca3af}
+    .current-turn{outline:3px solid #3b82f6;outline-offset:-3px}
+    .path{outline:2px dashed #f59e0b; outline-offset:-2px; animation:pathPulse .6s ease-in-out infinite alternate}
+    @keyframes pathPulse { from{opacity:.6} to{opacity:1} }
   </style>
 </head>
-
 <body>
-  <div id="app">
-    <header>
-      <strong>{{ myName }}</strong>
-      <h1>View</h1>
-      <h1>Cash:</h1><span class="money"> ${{ myMoney }}</span>
-        <button class="btn2" :disabled="!isMyTurn" @click="rollMine()" title="Wait for your turn">🎲 Roll</button>
-        <button class="btn2" v-if="amInJail && hasGOJ" @click="useGOJ()" title="Use Get Out of Jail Free">Use
-          GOJ</button>
-      <div class="spacer"></div>
+  <div id="hud">
+    <span id="who" class="pill"></span>
+    <span id="dice" class="pill"></span>
+    <span id="cash" class="pill"></span>
+    <span id="jail" class="pill"></span>
+    <span id="tile" class="pill"></span>
+    <div class="flags">
+      <button id="roll">Roll</button>
+      <button id="buy">Buy</button>
+      <button id="trade">Trade</button>
+      <button id="endTurn">End Turn</button>
+      <button id="useGoj">Use GOJ</button>
+      <button id="payJail">$50 to leave Jail</button>
+    </div>
+    <span id="error"></span>
+    <ul id="tray" class="mini" style="list-style:none;display:flex;gap:6px;margin:6px 0 0 0;padding:0"></ul>
+    <div id="whyBuy" class="mini"></div>
+  </div>
 
-      <div class="ctl" v-if="myName">
-        <span>Pos:</span>
-        <input class="num" type="number" min="0" max="39" v-model.number="posDraft" @change="applyPosDraft">
-        <button class="btn" @click="bumpMyPos(-1)">−1</button>
-        <button class="btn" @click="bumpMyPos(1)">+1</button>
+  <!-- INLINE BOARD START -->
+  <div id="gameBoard" class="container stage0">
+    <!-- 20: Free Parking -->
+    <div class="corner" data-idx="20">
+      <div class="parking">
+        <h2>FREE</h2>
+        <img src="/images/parking.svg" class="parkingCar" alt="Free Parking">
+        <span>PARKING</span>
       </div>
+      <div class="tile-tokens"></div>
+    </div>
 
-      <div class="ctl">
-        <label>Scale
-          <select v-model.number="oledScale">
-            <option :value="2">2×</option>
-          </select>
-        </label>
-        <label><input type="checkbox" v-model="oledBold"> Bold</label>
-        <label><input type="checkbox" v-model="oledInvert"> Invert</label>
-      </div>
-    </header>
-
-    <div
-      style="display:flex;align-items:center;gap:10px;margin:8px 0;padding:8px;border:1px solid #374151;border-radius:8px;background:#111;">
-      <div style="font-size:40px;line-height:1">{{ DICE[diceA] }} {{ DICE[diceB] }}</div>
-      <div style="font-size:13px;color:#cbd5e1">
-        Last roll: <strong>{{ lastRoller }}</strong>
-        <span v-if="(diceA||diceB)">&nbsp;= {{ (diceA||0)+(diceB||0) }}</span>
-      </div>
-      <div style="margin-left:auto;font-size:12px;color:#facc15" v-if="lastCard">
-        <span style="color:#cbd5e1">Card:</span>
-        <strong>{{ lastCard.deck==='chest' ? 'Community Chest' : 'Chance' }}</strong>
-        — {{ lastCard.text }}
+    <!-- 21-29 along top edge -->
+    <div class="gameRow top">
+      <div class="row">
+        <div class="space" data-idx="29"><div class="property yellow"></div><h3>MARVIN<br>GARDENS</h3><h3>$280</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="28"><h3>WATER<br>WORKS</h3><img class="rr" src="/images/waterWorks.svg" alt="Water Works"><h3>$150</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="27"><div class="property yellow"></div><h3>VENTNOR<br>AVENUE</h3><h3>$260</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="26"><div class="property yellow"></div><h3>ATLANTIC<br>AVENUE</h3><h3>$260</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="25"><h3>B. &amp; O.<br>RAILROAD</h3><img class="rr" src="/images/train.svg" alt="B. & O. Railroad"><h3>$200</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="24"><div class="property red"></div><h3>ILLINOIS<br>AVENUE</h3><h3>$240</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="23"><div class="property red"></div><h3>INDIANA<br>AVENUE</h3><h3>$220</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="22"><h3>CHANCE</h3><img class="chance" src="/images/chance.svg" alt="Chance"><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="21"><div class="property red"></div><h3>KENTUCKY<br>AVENUE</h3><h3>$220</h3><div class="tile-tokens"></div></div>
       </div>
     </div>
 
-    <section class="grid" :data-render="renderTick">
-      <template v-for="k in 40">
-        <div v-if="boardIndexToPropIndex[k-1]==null" :key="'nb'+(k-1)" class="tile" :style="gridPos(k-1)">
-          <div class="nbtext">{{ nonBuy[k-1] || '' }}</div>
-          <div class="picons" v-if="playersAt(k-1).length">
-            <div v-for="pi in playersAt(k-1)" :key="'nbtok'+k+'-'+pi" class="picon" :class="'p'+pi"
-              :title="state.playerNames[pi-1]">
-              {{ (state.playerNames[pi-1]||('P'+pi)).slice(0,2).toUpperCase() }}
-            </div>
-          </div>
-        </div>
+    <!-- 30: Go To Jail -->
+    <div class="corner" data-idx="30">
+      <div class="goToJail"><h2>GO TO</h2><img class="policeMan" src="/images/goToJail.svg" alt="Go To Jail"><h2>JAIL</h2></div>
+      <div class="tile-tokens"></div>
+    </div>
 
-        <div v-else :key="'p'+(k-1)" class="tile" :style="gridPos(k-1)">
-          <div class="topbar" :style="{background: colors[groupOf(k-1)]}">
-            <div class="name">{{ propName(k-1) }}</div>
-          </div>
+    <!-- 19-11 -->
+    <div class="gameRow left">
+      <div class="row">
+        <div class="space" data-idx="19"><div class="property orange"></div><h3>NEW YORK<br>AVENUE</h3><h3>$200</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="18"><div class="property orange"></div><h3>TENNESSEE<br>AVENUE</h3><h3>$180</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="17"><h3>COMMUNITY<br>CHEST</h3><img class="chest" src="/images/chest.svg" alt="Community Chest"><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="16"><div class="property orange"></div><h3>ST. JAMES<br>PLACE</h3><h3>$180</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="15"><h3>PENNSYLVANIA<br>RAILROAD</h3><img class="rr" src="/images/train.svg" alt="Pennsylvania Railroad"><h3>$200</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="14"><div class="property magenta"></div><h3>VIRGINIA<br>AVENUE</h3><h3>$160</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="13"><div class="property magenta"></div><h3>STATES<br>AVENUE</h3><h3>$140</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="12"><h3>ELECTRIC<br>COMPANY</h3><img class="electric" src="/images/electric.svg" alt="Electric Company"><h3>$150</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="11"><div class="property magenta"></div><h3>ST. CHARLES<br>PLACE</h3><h3>$140</h3><div class="tile-tokens"></div></div>
+      </div>
+    </div>
 
-          <canvas class="oled" :width="64" :height="32" :style="{width:(64*oledScale)+'px',height:(32*oledScale)+'px'}"
-            :ref="el => setCanvas(pIndex(k-1), el)"></canvas>
-          <div class="picons" v-if="playersAt(k-1).length">
-            <div v-for="pi in playersAt(k-1)" :key="'ptok'+k+'-'+pi" class="picon" :class="'p'+pi"
-              :title="state.playerNames[pi-1]">
-              {{ (state.playerNames[pi-1]||('P'+pi)).slice(0,2).toUpperCase() }}
-            </div>
-          </div>
-        </div>
-      </template>
-    </section>
-    <div class="toasts">
-      <template v-for="t in toasts">
-        <div v-if="t && t.text" :key="t.id" class="toast" :class="t.level">{{ t.text }}</div>
-      </template>
+    <!-- Center -->
+    <div class="center">
+      <div class="top"><div class="cardCase"><h1>COMMUNITY CHEST</h1><div class="cChestCards"></div></div></div>
+      <div><img class="logo" src="/images/MonopolyLogo.svg" alt="Logo"></div>
+      <div class="bottom"><div></div><div class="cardCase"><h1>CHANCE</h1><div class="chanceCards"></div></div></div>
+    </div>
+
+    <!-- 39-31 -->
+    <div class="gameRow right">
+      <div class="row">
+        <div class="space" data-idx="39"><div class="property blue"></div><h3>BOARDWALK</h3><h3>$400</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="38"><h2>LUXURY<br>TAX</h2><img class="luxury" src="/images/luxury.svg" alt="Luxury Tax"><h3>$100</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="37"><div class="property blue"></div><h3>PARK<br>PLACE</h3><h3>$350</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="36"><h3>CHANCE</h3><img class="chance" src="/images/chance.svg" alt="Chance"><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="35"><h3>SHORT<br>LINE</h3><img class="rr" src="/images/train.svg" alt="Short Line"><h3>$200</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="34"><div class="property green"></div><h3>PENNSYLVANIA<br>AVENUE</h3><h3>$320</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="33"><h3>COMMUNITY<br>CHEST</h3><img class="chest" src="/images/chest.svg" alt="Community Chest"><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="32"><div class="property green"></div><h3>NORTH CAROLINA<br>AVENUE</h3><h3>$300</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="31"><div class="property green"></div><h3>PACIFIC<br>AVENUE</h3><h3>$300</h3><div class="tile-tokens"></div></div>
+      </div>
+    </div>
+
+    <!-- 10: Jail -->
+    <div class="corner jail" data-idx="10">
+      <h1 class="h1down">JUST</h1>
+      <div class="jailBlock"><img class="prisoner" src="/images/prisoner.svg" alt="In Jail"></div>
+      <h1 class="visit">VISITING</h1>
+      <div class="tile-tokens"></div>
+    </div>
+
+    <!-- 9-1 -->
+    <div class="gameRow bottom">
+      <div class="row">
+        <div class="space" data-idx="9"><div class="property lightBlue"></div><h3>CONNECTICUT<br>AVENUE</h3><h3>$120</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="8"><div class="property lightBlue"></div><h3>VERMONT<br>AVENUE</h3><h3>$100</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="7"><h3>CHANCE</h3><img class="chance" src="/images/chance.svg" alt="Chance"><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="6"><div class="property lightBlue"></div><h3>ORIENTAL<br>AVENUE</h3><h3>$100</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="5"><h3>READING<br>RAILROAD</h3><img class="rr" src="/images/train.svg" alt="Reading Railroad"><h3>$200</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="4"><h2>INCOME<br>TAX</h2><img class="income" src="/images/diamond.svg" alt="Income Tax"><h3>$200</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="3"><div class="property brown"></div><h3>BALTIC<br>AVENUE</h3><h3>$60</h3><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="2"><h3>COMMUNITY<br>CHEST</h3><img class="chest" src="/images/chest.svg" alt="Community Chest"><div class="tile-tokens"></div></div>
+        <div class="space" data-idx="1"><div class="property brown"></div><h3>MEDITERRANEAN<br>AVENUE</h3><h3>$60</h3><div class="tile-tokens"></div></div>
+      </div>
+    </div>
+
+    <!-- 0: GO -->
+    <div class="corner go" data-idx="0">
+      <div class="start"><h3>COLLECT $200 SALARY AS YOU PASS</h3><img class="goSvg" src="/images/go.svg" alt="GO"></div>
+      <div class="tile-tokens"></div>
+    </div>
+  </div>
+  <!-- INLINE BOARD END -->
+
+  <div id="lockOverlay" class="overlay">
+    <div class="panel">
+      <h3>Seat taken</h3>
+      <p class="mini">This seat is already bound to another player window. Open a different seat from the Lobby or ask the GM.</p>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
+        <a id="backLobby" class="pill" href="#" style="text-decoration:none;padding:6px 8px">Open Lobby</a>
+      </div>
     </div>
   </div>
 
-  <style>
-    .toasts {
-      position: fixed;
-      right: 12px;
-      bottom: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      z-index: 50
+  <script type="module">
+    import { mountBoard } from '/shared/board.js';
+    import { BOARD, CHANCE_CARDS, CHEST_CARDS } from '/shared/props-data.js';
+
+    const VERSION = 2;
+    const params = new URLSearchParams(location.search);
+    const DEBUG = params.has('debug') || localStorage.getItem('debug') === '1';
+    const pid = (params.get('p') | 0) || 0;
+    const gameId = params.get('g') || 'default';
+    const joinName = (params.get('n') || '').slice(0,24);
+    const joinColor = (params.get('c') || '').slice(0,16);
+
+    const who = document.getElementById('who');
+    const dice = document.getElementById('dice');
+    const cash = document.getElementById('cash');
+    const jail = document.getElementById('jail');
+    const tray = document.getElementById('tray');
+    const tileBox = document.getElementById('tile');
+    const errorEl = document.getElementById('error');
+    const overlay = document.getElementById('lockOverlay');
+    const backLobby = document.getElementById('backLobby');
+
+    const btnRoll = document.getElementById('roll');
+    const btnBuy = document.getElementById('buy');
+    const btnEnd = document.getElementById('endTurn');
+    const btnTrade = document.getElementById('trade');
+    const btnGOJ = document.getElementById('useGoj');
+    const btnPayJail = document.getElementById('payJail');
+
+    let state = null;
+    // Prevent duplicate buy prompts for the same landing
+    let lastBuyPromptKey = "";
+    let clientId = localStorage.getItem('clientId');
+    if (!clientId) { clientId = Math.random().toString(36).slice(2) + Date.now(); localStorage.setItem('clientId', clientId); }
+
+    const board = mountBoard(document.getElementById('gameBoard'));
+
+    let ws = null;
+    let hbTimer = null;
+    let reconnectTimer = null;
+    let backoffMs = 1000;
+    const maxBackoffMs = 10000;
+
+    const send = msg => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); };
+    let debugEl = null; const msgCounts = {}; function bump(type){ msgCounts[type]=(msgCounts[type]||0)+1; if (DEBUG && debugEl){ const lp = localStorage.getItem(`pt:${gameId}`)||'-'; const le = localStorage.getItem(`ev:${gameId}`)||'-'; debugEl.textContent = `rev=${state?.rev||'-'} patch=${lp} event=${le} | ` + Object.entries(msgCounts).map(([k,v])=>`${k}:${v}`).join(' ');} }
+    const act = type => send({ type, pid, version: VERSION, gameId });
+
+    function scheduleReconnect(){
+      if (reconnectTimer) return;
+      const wait = backoffMs + Math.floor(Math.random()*500);
+      reconnectTimer = setTimeout(()=>{ reconnectTimer = null; connect(); }, wait);
+      backoffMs = Math.min(backoffMs * 2, maxBackoffMs);
     }
 
-    .toast {
-      background: #111;
-      border: 1px solid #333;
-      color: #eee;
-      padding: 8px 10px;
-      border-radius: 6px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-      font-size: 12px;
-      max-width: 320px
+    function startHeartbeat(){
+      clearInterval(hbTimer);
+      hbTimer = setInterval(()=>{
+        send({ type: 'hb', version: VERSION, gameId, clientId, pid });
+      }, 15000);
     }
 
-    .toast.warn {
-      border-color: #a16207;
-      color: #fde68a
+    function connect(){
+      try { if (ws) ws.close(); } catch {}
+      ws = new WebSocket((location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/ws');
+      ws.addEventListener('open', () => {
+        backoffMs = 1000;
+        const joinMsg = { type: 'join', pid, version: VERSION, gameId, clientId };
+        if (joinName) joinMsg.name = joinName;
+        if (joinColor) joinMsg.color = joinColor;
+        // Patch/event backfill support
+        joinMsg.acceptPatch = true;
+        joinMsg.lastEventId = Number(localStorage.getItem(`ev:${gameId}`)||'0')|0;
+        joinMsg.lastPatchId = Number(localStorage.getItem(`pt:${gameId}`)||'0')|0;
+        send(joinMsg);
+        startHeartbeat();
+      });
+      ws.addEventListener('close', scheduleReconnect);
+      ws.addEventListener('error', scheduleReconnect);
+      let needsRender = false;
+      let rafId = 0;
+      const scheduleRender = () => { if (needsRender) return; needsRender = true; rafId = requestAnimationFrame(() => { needsRender = false; render(); }); };
+
+      if (DEBUG){ debugEl=document.createElement('div'); debugEl.style.cssText='position:fixed;right:6px;bottom:6px;background:rgba(0,0,0,.6);color:#9ca3af;padding:6px;border-radius:6px;border:1px solid #334155;font:12px monospace;z-index:9999'; document.body.appendChild(debugEl); }
+      ws.addEventListener('message', ev => {
+        let m; try{ m = JSON.parse(ev.data) } catch { return; }
+        if (m.version && m.version !== VERSION) { errorEl.textContent = 'Version mismatch'; bump('ver.mismatch'); return; }
+        bump(m.type||'unknown');
+        if (m.type === 'state') { errorEl.textContent = ''; state = m.payload; lockCheck(); scheduleRender(); }
+        if (m.type === 'patch') {
+          const p = m.payload || {};
+          if (!state || p.kind === 'reset' || (p.fromRev|0) !== (state.rev|0)) { state = p.state || state; }
+          else if (p.kind === 'delta' && p.changes) {
+            const ch = p.changes;
+            if ('rev' in ch) state.rev = ch.rev|0;
+            if ('turn' in ch) state.turn = ch.turn|0;
+            if ('rollBlocked' in ch) state.rollBlocked = !!ch.rollBlocked;
+            if ('phase' in ch) state.phase = ch.phase;
+            if ('bank' in ch) state.bank = ch.bank;
+            if ('auction' in ch) state.auction = ch.auction;
+            if ('winner' in ch) state.winner = (ch.winner==null?null:ch.winner);
+            if ('turnExpiresAt' in ch) state.turnExpiresAt = ch.turnExpiresAt;
+            if ('turnTimer' in ch) state.turnTimer = ch.turnTimer;
+            if ('seats' in ch) state.seats = ch.seats || {};
+            if ('seatLocks' in ch) state.seatLocks = ch.seatLocks || {};
+            if ('disabled' in ch) state.disabled = ch.disabled || {};
+            if (Array.isArray(ch.players)) { ch.players.forEach(({i,v}) => { state.players[i] = v; }); }
+            if (Array.isArray(ch.properties)) { ch.properties.forEach(({i,v}) => { state.properties[i] = v; }); }
+            if ('rollTray' in ch) state.rollTray = ch.rollTray;
+            if ('log' in ch) state.log = ch.log;
+            state.rev = p.toRev|0;
+          }
+          if (typeof p.id === 'number') localStorage.setItem(`pt:${gameId}`, String(p.id));
+          lockCheck(); scheduleRender();
+        }
+        if (m.type === 'ack.roll') { onAckRoll(m.payload); }
+        if (m.type === 'events') { const arr = Array.isArray(m.payload)?m.payload:[]; const last = arr[arr.length-1]; if (last && typeof last.id==='number') localStorage.setItem(`ev:${gameId}`, String(last.id)); }
+        if (m.type === 'event') { const e = m.payload; if (e && typeof e.id==='number') localStorage.setItem(`ev:${gameId}`, String(e.id)); }
+        if (m.type === 'events.since') { const arr = Array.isArray(m.payload?.events) ? m.payload.events : []; const last = arr[arr.length-1]; if (last && typeof last.id==='number') localStorage.setItem(`ev:${gameId}`, String(last.id)); }
+        if (m.type === 'trade.offer') { if ((m.payload?.to|0) === (pid|0)) showToast('Trade offer received'); }
+        if (m.type === 'trade.reject') { showToast('Trade rejected'); }
+        if (m.type === 'trade.accept') { showToast('Trade completed'); }
+        if (m.type === 'trade.ready') { showToast('Trade accepted; waiting GM'); }
+        if (m.type === 'err') { const code = m.payload && m.payload.code; errorEl.textContent = code ? `Error: ${code}` : 'Error'; }
+      });
     }
 
-    .toast.error {
-      border-color: #b91c1c;
-      color: #fecaca
+    connect();
+
+    btnRoll.onclick = () => act('roll');
+    btnBuy.onclick = () => act('buy');
+    btnEnd.onclick = () => act('endTurn');
+    btnGOJ.onclick = () => act('useGoj');
+    btnPayJail.onclick = () => act('jail.pay');
+    btnTrade.onclick = () => openTrade();
+
+    backLobby.href = `/lobby.html?g=${encodeURIComponent(gameId)}`;
+
+    function lockCheck(){
+      const seatClient = state?.seats?.[pid];
+      const takenByOther = seatClient && seatClient !== clientId;
+      overlay.style.display = takenByOther ? 'flex' : 'none';
+      const disabledByGM = !!(state?.disabled?.[pid]);
+      const disabled = !!takenByOther || disabledByGM;
+      [btnRoll, btnBuy, btnEnd, btnGOJ, btnPayJail, btnTrade].forEach(b => b.disabled = disabled);
+      if (disabledByGM && !takenByOther) { errorEl.textContent = 'Disabled by GM'; }
     }
-  </style>
-  <script type="module" src="./js/player-app.js"></script>
+
+    function render() {
+      if (!state) return;
+      board.render(state);
+
+      const me = state.players[pid];
+      if (!me) return;
+
+      const currentName = state.players[state.turn]?.name || `P${state.turn + 1}`;
+      who.textContent = `You: ${me.name} · Turn: ${currentName}`;
+      cash.textContent = `$${me.cash}`;
+      jail.textContent = me.inJail ? 'Jail' : '';
+      const last = state.rollTray?.[0];
+      dice.textContent = last ? `${last.d1}+${last.d2}=${last.total}` : '-';
+
+      const here = BOARD[me.pos];
+      tileBox.textContent = here ? `${me.pos}: ${here.name || here.kind}` : '';
+
+      const deed = state.properties[me.pos];
+      const isBuyable = here && (here.kind==='street'||here.kind==='rr'||here.kind==='util');
+      const canBuy = !!(deed && deed.owner == null && isBuyable && state.turn === pid && !state.rollBlocked);
+      const whyBuy = (()=>{
+        if (state.turn !== pid) return 'Not your turn';
+        if (state.rollBlocked) return 'Blocked by GM';
+        if (!isBuyable) return 'This tile is not buyable';
+        if (!deed || deed.owner != null) return 'Already owned';
+        if ((me.cash|0) < ((here.price|0)||0)) return 'Not enough cash';
+        return '';
+      })();
+
+      const canUseGOJ = me.inJail && me.jailFree > 0 && state.turn === pid;
+      const canPayJail = me.inJail && me.cash >= 50 && state.turn === pid;
+      const canRoll = state.turn === pid && !state.rollBlocked;
+      const canEnd = (()=>{
+        if (state.turn !== pid) return false;
+        if ((me.cash|0) < 0) return false;
+        if (me.inJail && (me.jailFree>0 || (me.cash|0) >= 50)) return false;
+        return true;
+      })();
+
+      btnBuy.disabled = !canBuy; btnBuy.title = canBuy?'':'Why: ' + whyBuy; document.getElementById('whyBuy').textContent = canBuy?'':whyBuy;
+      btnGOJ.disabled = !canUseGOJ; btnGOJ.title = canUseGOJ?'':'Available only in Jail with GOJ card';
+      btnPayJail.disabled = !canPayJail; btnPayJail.title = canPayJail?'':'Need $50 and be in Jail';
+      btnRoll.disabled = !canRoll; btnRoll.title = canRoll?'':'Wait your turn or GM unblocks';
+      btnEnd.disabled = !canEnd; btnEnd.title = canEnd?'':'Resolve pending items first';
+      btnTrade.disabled = state.turn !== pid; btnTrade.title = state.turn===pid?'':'Not your turn';
+
+      maybeShowRentBreakdown(me);
+    }
+
+    function onAckRoll(payload){
+      if (!payload) return;
+      animateDice(payload.d1|0, payload.d2|0);
+      addToTray(payload);
+      if (typeof payload.from==='number' && typeof payload.to==='number') {
+        highlightPath(payload.from|0, payload.to|0);
+        // animate my token along the path
+        try { board.animateMove(pid|0, payload.from|0, payload.to|0, { vary: true }); } catch {}
+        // After movement completes, consider prompting to buy if unowned
+        setTimeout(maybePromptBuy, 100);
+      }
+    }
+
+    function animateDice(d1,d2){
+      const t0 = Date.now();
+      const dur = 800;
+      const timer = setInterval(()=>{
+        const p = (Date.now()-t0)/dur;
+        if (p>=1){ clearInterval(timer); dice.textContent = `${d1}+${d2}=${(d1|0)+(d2|0)}`; return; }
+        const a = 1+((Math.random()*6)|0), b = 1+((Math.random()*6)|0);
+        dice.textContent = `${a}+${b}=?`;
+      }, 60);
+    }
+
+    function addToTray(res){
+      const li = document.createElement('li');
+      li.textContent = `${res.d1}+${res.d2}=${res.total}${res.extra?' (doubles)':''}`;
+      tray.prepend(li);
+      while (tray.children.length > 6) tray.removeChild(tray.lastChild);
+    }
+
+    function highlightPath(from, to){
+      const path = [];
+      for (let i=1;i<=40;i++){
+        const idx = (from + i) % 40;
+        path.push(idx);
+        if (idx === ((to%40)+40)%40) break;
+      }
+      const added = [];
+      path.forEach(idx=>{ const el = board.getTileEl(idx); if (!el) return; el.classList.add('path'); added.push(el); });
+      setTimeout(()=> added.forEach(el=>el.classList.remove('path')), 2000);
+    }
+
+    function maybeShowRentBreakdown(me){
+      const e = (state.log||[])[0];
+      if (!e || e.type !== 'rent' || (e.from|0)!==(pid|0)) return;
+      const idx = e.idx|0; const sq = BOARD[idx]; const deed = state.properties?.[idx];
+      let desc = '';
+      if (sq?.kind==='street'){
+        const h = deed?.houses|0; const base = sq.rent?.[0]||0; const val = sq.rent?.[Math.min(h,5)]||0;
+        if (h===0){
+          const group = sq.group;
+          const groupCount = BOARD.filter(s=> s && s.kind==='street' && s.group===group).length;
+          const setOwned = state.properties && (state.properties.filter((d,i)=> BOARD[i]?.group===group && d?.owner===deed?.owner).length === groupCount);
+          desc = `Rent: base ${base}${setOwned?' ×2 set':''} = $${val}`;
+        } else {
+          desc = `Rent: ${h===5?'hotel':h+' house'+(h>1?'s':'')} = $${val}`;
+        }
+      } else if (sq?.kind==='rr'){
+        let n=0; (state.properties||[]).forEach((d,i)=>{ if (BOARD[i]?.kind==='rr' && d?.owner===deed?.owner) n++;});
+        desc = `Rent: Railroad x${n} = $${e.amount|0}`;
+      } else if (sq?.kind==='util'){
+        desc = `Rent: Utility multiplier × dice = $${e.amount|0}`;
+      }
+      if (desc) showToast(desc);
+    }
+
+    function showToast(text){
+      const el = document.createElement('div');
+      el.textContent = text;
+      el.style.position='fixed'; el.style.left='50%'; el.style.transform='translateX(-50%)'; el.style.bottom='20px'; el.style.background='#0e1527'; el.style.color='#e5e7eb'; el.style.border='1px solid #1f2937'; el.style.padding='8px 10px'; el.style.borderRadius='8px'; el.style.zIndex='1000';
+      document.body.appendChild(el);
+      setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .4s'; setTimeout(()=>el.remove(), 400); }, 2000);
+    }
+
+    // Prompt the current player to buy the landed property if it's unowned
+    function maybePromptBuy(){
+      if (!state) return;
+      const me = state.players?.[pid]; if (!me) return;
+      if ((state.turn|0) !== (pid|0)) return; // Only prompt on your turn
+      if (!!state.rollBlocked) return;
+      const idx = (me.pos|0);
+      const here = BOARD[idx];
+      const deed = state.properties?.[idx];
+      const isBuyable = here && (here.kind==='street'||here.kind==='rr'||here.kind==='util');
+      const price = (here?.price|0) || 0;
+      const canBuy = !!(isBuyable && deed && deed.owner == null && (me.cash|0) >= price);
+      if (!canBuy) return;
+      const key = `${state.rev}|${idx}|${pid}`;
+      if (lastBuyPromptKey === key) return;
+      lastBuyPromptKey = key;
+      openBuyPrompt(idx, here, price);
+    }
+
+    function openBuyPrompt(idx, tile, price){
+      const modal = document.createElement('div'); modal.className='overlay'; modal.style.display='flex';
+      const panel = document.createElement('div'); panel.className='panel';
+      const name = tile?.name || tile?.kind || `#${idx}`;
+      panel.innerHTML = `
+        <h3>Buy Property?</h3>
+        <div class="mini" style="margin:6px 0 10px 0">${idx}: ${name}</div>
+        <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:8px">
+          <button id="cancel" class="btn">Later</button>
+          <button id="auction" class="btn">Start Auction</button>
+          <button id="buyNow" class="btn">Buy for $${price}</button>
+        </div>`;
+      modal.appendChild(panel); document.body.appendChild(modal);
+      panel.querySelector('#cancel').onclick = () => modal.remove();
+      panel.querySelector('#buyNow').onclick = () => { try { act('buy'); } catch {} modal.remove(); };
+      panel.querySelector('#auction').onclick = () => { try { act('decline'); } catch {} modal.remove(); };
+    }
+
+    function openTrade(){
+      if (!state) return;
+      const me = state.players[pid]; if (!me) return;
+      const modal = document.createElement('div'); modal.className='overlay'; modal.style.display='flex';
+      const panel = document.createElement('div'); panel.className='panel'; panel.style.minWidth='560px';
+      panel.innerHTML = `
+        <h3>Propose Trade</h3>
+        <div class="row" style="display:flex; gap:12px; align-items:flex-start">
+          <div style="flex:1">
+            <div class="mini">Your properties</div>
+            <div id="mine" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+          </div>
+          <div style="flex:1">
+            <div class="mini">Partner properties</div>
+            <div id="theirs" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+          </div>
+        </div>
+        <div style="display:flex; gap:12px; margin-top:8px">
+          <div style="flex:1"><div class="mini">You give</div><div id="give" style="min-height:40px;border:1px dashed #334155;padding:6px;border-radius:6px"></div>
+          <div class="mini">Cash <input id="giveCash" type="number" style="width:6em" /></div></div>
+          <div style="flex:1"><div class="mini">You get</div><div id="take" style="min-height:40px;border:1px dashed #334155;padding:6px;border-radius:6px"></div>
+          <div class="mini">Cash <input id="takeCash" type="number" style="width:6em" /></div></div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; margin-top:8px">
+          <label>Partner <select id="toSel"></select></label>
+          <label><input type="checkbox" id="needGm" /> Require GM approval</label>
+          <span style="flex:1"></span>
+          <button id="cancel" class="btn">Cancel</button>
+          <button id="submit" class="btn">Send Offer</button>
+        </div>`;
+      modal.appendChild(panel); document.body.appendChild(modal);
+
+      const mine = panel.querySelector('#mine');
+      const theirs = panel.querySelector('#theirs');
+      const giveBox = panel.querySelector('#give');
+      const takeBox = panel.querySelector('#take');
+      const toSel = panel.querySelector('#toSel');
+      (state.players||[]).forEach(p=>{ if (!p || p.id===pid) return; const o=document.createElement('option'); o.value=p.id; o.textContent=p.name; toSel.appendChild(o); });
+
+      function chip(idx, label){ const c=document.createElement('span'); c.textContent=label; c.className='pill'; c.style.cursor='grab'; c.draggable=true; c.dataset.idx=String(idx); c.addEventListener('dragstart', e=>{ e.dataTransfer.setData('text/plain', String(idx)); }); return c; }
+      function allowDrop(el){ el.addEventListener('dragover', e=>{ e.preventDefault(); el.style.background='#0b1221'; }); el.addEventListener('dragleave', ()=>{ el.style.background=''; }); el.addEventListener('drop', e=>{ e.preventDefault(); el.style.background=''; const idx=Number(e.dataTransfer.getData('text/plain')||'0')|0; el.appendChild(chip(idx, tileName(idx))); }); }
+      allowDrop(giveBox); allowDrop(takeBox);
+
+      function tileName(idx){ const t=BOARD[idx]; return t?.name ? t.name : t?.kind || `#${idx}`; }
+      function renderLists(){
+        mine.textContent=''; theirs.textContent='';
+        (state.properties||[]).forEach((d,i)=>{
+          const meta = BOARD[i]; if (!meta) return; if (!(meta.kind==='street'||meta.kind==='rr'||meta.kind==='util')) return;
+          if (d?.owner===pid) mine.appendChild(chip(i, tileName(i)));
+        });
+        const to = Number(toSel.value||0);
+        (state.properties||[]).forEach((d,i)=>{ const meta=BOARD[i]; if (!meta) return; if (!(meta.kind==='street'||meta.kind==='rr'||meta.kind==='util')) return; if (d?.owner===to) theirs.appendChild(chip(i, tileName(i))); });
+      }
+      toSel.onchange = renderLists; renderLists();
+
+      panel.querySelector('#cancel').onclick = ()=> modal.remove();
+      panel.querySelector('#submit').onclick = ()=>{
+        const to = Number(toSel.value||0); if (!to && to!==0) return;
+        const giveProps = [...giveBox.querySelectorAll('[data-idx]')].map(e=> e.dataset.idx|0);
+        const takeProps = [...takeBox.querySelectorAll('[data-idx]')].map(e=> e.dataset.idx|0);
+        const giveCash = Number(panel.querySelector('#giveCash').value||0)|0;
+        const takeCash = Number(panel.querySelector('#takeCash').value||0)|0;
+        send({ type:'trade.propose', version: VERSION, gameId, give: { props: giveProps, cash: giveCash }, take: { props: takeProps, cash: takeCash }, to, gmApprove: !!panel.querySelector('#needGm').checked });
+        modal.remove();
+      };
+    }
+  </script>
 </body>
-
 </html>

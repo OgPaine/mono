@@ -1,0 +1,93 @@
+export const BOARD = Object.freeze([
+  { kind: 'start', name: 'GO', award: 200 },
+  { kind: 'street', name: 'Mediterranean Avenue', group: 'brown', price: 60, rent: [2, 10, 30, 90, 160, 250], houseCost: 50 },
+  { kind: 'chest', name: 'Community Chest' },
+  { kind: 'street', name: 'Baltic Avenue', group: 'brown', price: 60, rent: [4, 20, 60, 180, 320, 450], houseCost: 50 },
+  { kind: 'tax', name: 'Income Tax', amount: 200 },
+  { kind: 'rr', name: 'Reading Railroad', price: 200 },
+  { kind: 'street', name: 'Oriental Avenue', group: 'lightblue', price: 100, rent: [6, 30, 90, 270, 400, 550], houseCost: 50 },
+  { kind: 'chance', name: 'Chance' },
+  { kind: 'street', name: 'Vermont Avenue', group: 'lightblue', price: 100, rent: [6, 30, 90, 270, 400, 550], houseCost: 50 },
+  { kind: 'street', name: 'Connecticut Avenue', group: 'lightblue', price: 120, rent: [8, 40, 100, 300, 450, 600], houseCost: 50 },
+  { kind: 'jail', name: 'Just Visiting / In Jail' },
+  { kind: 'street', name: 'St. Charles Place', group: 'magenta', price: 140, rent: [10, 50, 150, 450, 625, 750], houseCost: 100 },
+  { kind: 'util', name: 'Electric Company', price: 150 },
+  { kind: 'street', name: 'States Avenue', group: 'magenta', price: 140, rent: [10, 50, 150, 450, 625, 750], houseCost: 100 },
+  { kind: 'street', name: 'Virginia Avenue', group: 'magenta', price: 160, rent: [12, 60, 180, 500, 700, 900], houseCost: 100 },
+  { kind: 'rr', name: 'Pennsylvania Railroad', price: 200 },
+  { kind: 'street', name: 'St. James Place', group: 'orange', price: 180, rent: [14, 70, 200, 550, 750, 950], houseCost: 100 },
+  { kind: 'chest', name: 'Community Chest' },
+  { kind: 'street', name: 'Tennessee Avenue', group: 'orange', price: 180, rent: [14, 70, 200, 550, 750, 950], houseCost: 100 },
+  { kind: 'street', name: 'New York Avenue', group: 'orange', price: 200, rent: [16, 80, 220, 600, 800, 1000], houseCost: 100 },
+  { kind: 'parking', name: 'Free Parking' },
+  { kind: 'street', name: 'Kentucky Avenue', group: 'red', price: 220, rent: [18, 90, 250, 700, 875, 1050], houseCost: 150 },
+  { kind: 'chance', name: 'Chance' },
+  { kind: 'street', name: 'Indiana Avenue', group: 'red', price: 220, rent: [18, 90, 250, 700, 875, 1050], houseCost: 150 },
+  { kind: 'street', name: 'Illinois Avenue', group: 'red', price: 240, rent: [20, 100, 300, 750, 925, 1100], houseCost: 150 },
+  { kind: 'rr', name: 'B. & O. Railroad', price: 200 },
+  { kind: 'street', name: 'Atlantic Avenue', group: 'yellow', price: 260, rent: [22, 110, 330, 800, 975, 1150], houseCost: 150 },
+  { kind: 'street', name: 'Ventnor Avenue', group: 'yellow', price: 260, rent: [22, 110, 330, 800, 975, 1150], houseCost: 150 },
+  { kind: 'util', name: 'Water Works', price: 150 },
+  { kind: 'street', name: 'Marvin Gardens', group: 'yellow', price: 280, rent: [24, 120, 360, 850, 1025, 1200], houseCost: 150 },
+  { kind: 'gotojail', name: 'Go To Jail' },
+  { kind: 'street', name: 'Pacific Avenue', group: 'green', price: 300, rent: [26, 130, 390, 900, 1100, 1275], houseCost: 200 },
+  { kind: 'street', name: 'North Carolina Avenue', group: 'green', price: 300, rent: [26, 130, 390, 900, 1100, 1275], houseCost: 200 },
+  { kind: 'chest', name: 'Community Chest' },
+  { kind: 'street', name: 'Pennsylvania Avenue', group: 'green', price: 320, rent: [28, 150, 450, 1000, 1200, 1400], houseCost: 200 },
+  { kind: 'rr', name: 'Short Line', price: 200 },
+  { kind: 'chance', name: 'Chance' },
+  { kind: 'street', name: 'Park Place', group: 'darkblue', price: 350, rent: [35, 175, 500, 1100, 1300, 1500], houseCost: 200 },
+  { kind: 'tax', name: 'Luxury Tax', amount: 100 },
+  { kind: 'street', name: 'Boardwalk', group: 'darkblue', price: 400, rent: [50, 200, 600, 1400, 1700, 2000], houseCost: 200 }
+]);
+
+export const UTIL_MULT = Object.freeze({ one: 4, two: 10 });
+export const RR_RENTS = Object.freeze([25, 50, 100, 200]);
+export const HOUSE_COST_BY_GROUP = Object.freeze({
+  brown: 50,
+  lightblue: 50,
+  magenta: 100,
+  orange: 100,
+  red: 150,
+  yellow: 150,
+  green: 200,
+  darkblue: 200
+});
+
+export const CHANCE_CARDS = Object.freeze([
+  { id: 'c_move_start', kind: 'move', to: 0, label: 'Advance to GO' },
+  { id: 'c_move_lbA', kind: 'move', to: 6, label: 'Advance to Oriental Avenue' },
+  { id: 'c_to_rr', kind: 'toNext', what: 'rr', label: 'Advance to the nearest Railroad' },
+  { id: 'c_to_util', kind: 'toNext', what: 'util', label: 'Advance to the nearest Utility' },
+  { id: 'c_div', kind: 'money', amount: 50, label: 'Bank pays you 50' },
+  { id: 'c_goj', kind: 'keep', effect: 'jailFree', label: 'Get out of jail free' },
+  { id: 'c_back3', kind: 'moveRel', delta: -3, label: 'Go back 3 spaces' },
+  { id: 'c_repair', kind: 'repair', perHouse: 25, perHotel: 100, label: 'Repairs: 25 per house, 100 per hotel' },
+  { id: 'c_speed', kind: 'money', amount: -15, label: 'Speeding fine 15' },
+  { id: 'c_move_redA', kind: 'move', to: 21, label: 'Advance to Kentucky Avenue' },
+  { id: 'c_move_rrA', kind: 'move', to: 5, label: 'Advance to Reading Railroad' },
+  { id: 'c_chair', kind: 'eachPlayer', amount: -50, label: 'Pay each player 50' },
+  { id: 'c_loan', kind: 'money', amount: 150, label: 'Collect 150' },
+  { id: 'c_bank_err', kind: 'money', amount: 150, label: 'Bank pays you 150' },
+  { id: 'c_jail', kind: 'jail', label: 'Go to jail' },
+  { id: 'c_move_dbB', kind: 'move', to: 39, label: 'Advance to Boardwalk' }
+]);
+
+export const CHEST_CARDS = Object.freeze([
+  { id: 'h_refund', kind: 'money', amount: 20, label: 'Income tax refund 20' },
+  { id: 'h_bank', kind: 'money', amount: 200, label: 'Bank error in your favor 200' },
+  { id: 'h_doc', kind: 'money', amount: -50, label: 'Doctor fee 50' },
+  { id: 'h_stock', kind: 'money', amount: 50, label: 'Stock sale 50' },
+  { id: 'h_goj', kind: 'keep', effect: 'jailFree', label: 'Get out of jail free' },
+  { id: 'h_jail', kind: 'jail', label: 'Go to jail' },
+  { id: 'h_inherit', kind: 'money', amount: 100, label: 'You inherit 100' },
+  { id: 'h_beauty', kind: 'money', amount: 10, label: 'Beauty contest 10' },
+  { id: 'h_ins', kind: 'money', amount: 100, label: 'Insurance matures 100' },
+  { id: 'h_hosp', kind: 'money', amount: -100, label: 'Hospital fees 100' },
+  { id: 'h_school', kind: 'money', amount: -50, label: 'School fees 50' },
+  { id: 'h_repair', kind: 'repair', perHouse: 25, perHotel: 100, label: 'Repairs' },
+  { id: 'h_bday', kind: 'eachPlayer', amount: 10, label: 'Birthday: collect 10 from each player' },
+  { id: 'h_rent', kind: 'money', amount: 25, label: 'Receive 25' },
+  { id: 'h_start', kind: 'move', to: 0, label: 'Advance to GO' },
+  { id: 'h_div', kind: 'money', amount: 50, label: 'Bank dividend 50' }
+]);

@@ -1,0 +1,330 @@
+<div id="gameBoard" class="container stage0">
+  <!-- 20: Free Parking -->
+  <div class="corner" data-idx="20">
+    <div class="parking">
+      <h2>FREE</h2>
+      <img src="/images/parking.svg" class="parkingCar" alt="Free Parking">
+      <span>PARKING</span>
+    </div>
+    <div class="tile-tokens"></div>
+  </div>
+
+  <!-- 21-29 along top edge -->
+  <div class="gameRow top">
+    <div class="row">
+      <!-- 29 Marvin Gardens -->
+      <div class="space" data-idx="29">
+        <div class="property yellow"></div>
+        <h3>MARVIN<br>GARDENS</h3>
+        <h3>$280</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 28 Water Works -->
+      <div class="space" data-idx="28">
+        <h3>WATER<br>WORKS</h3>
+        <img class="rr" src="/images/waterWorks.svg" alt="Water Works">
+        <h3>$150</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 27 Ventnor -->
+      <div class="space" data-idx="27">
+        <div class="property yellow"></div>
+        <h3>VENTNOR<br>AVENUE</h3>
+        <h3>$260</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 26 Atlantic -->
+      <div class="space" data-idx="26">
+        <div class="property yellow"></div>
+        <h3>ATLANTIC<br>AVENUE</h3>
+        <h3>$260</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 25 B&O RR -->
+      <div class="space" data-idx="25">
+        <h3>B. &amp; O.<br>RAILROAD</h3>
+        <img class="rr" src="/images/train.svg" alt="B. & O. Railroad">
+        <h3>$200</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 24 Illinois -->
+      <div class="space" data-idx="24">
+        <div class="property red"></div>
+        <h3>ILLINOIS<br>AVENUE</h3>
+        <h3>$240</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 23 Indiana -->
+      <div class="space" data-idx="23">
+        <div class="property red"></div>
+        <h3>INDIANA<br>AVENUE</h3>
+        <h3>$220</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 22 Chance -->
+      <div class="space" data-idx="22">
+        <h3>CHANCE</h3>
+        <img class="chance" src="/images/chance.svg" alt="Chance">
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 21 Kentucky -->
+      <div class="space" data-idx="21">
+        <div class="property red"></div>
+        <h3>KENTUCKY<br>AVENUE</h3>
+        <h3>$220</h3>
+        <div class="tile-tokens"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 30: Go To Jail -->
+  <div class="corner" data-idx="30">
+    <div class="goToJail">
+      <h2>GO TO</h2>
+      <img class="policeMan" src="/images/goToJail.svg" alt="Go To Jail">
+      <h2>JAIL</h2>
+    </div>
+    <div class="tile-tokens"></div>
+  </div>
+
+  <!-- 19-11 along left edge (top to bottom visually after rotation) -->
+  <div class="gameRow left">
+    <div class="row">
+      <!-- 19 New York -->
+      <div class="space" data-idx="19">
+        <div class="property orange"></div>
+        <h3>NEW YORK<br>AVENUE</h3>
+        <h3>$200</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 18 Tennessee -->
+      <div class="space" data-idx="18">
+        <div class="property orange"></div>
+        <h3>TENNESSEE<br>AVENUE</h3>
+        <h3>$180</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 17 Community Chest -->
+      <div class="space" data-idx="17">
+        <h3>COMMUNITY<br>CHEST</h3>
+        <img class="chest" src="/images/chest.svg" alt="Community Chest">
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 16 St. James -->
+      <div class="space" data-idx="16">
+        <div class="property orange"></div>
+        <h3>ST. JAMES<br>PLACE</h3>
+        <h3>$180</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 15 Pennsylvania RR -->
+      <div class="space" data-idx="15">
+        <h3>PENNSYLVANIA<br>RAILROAD</h3>
+        <img class="rr" src="/images/train.svg" alt="Pennsylvania Railroad">
+        <h3>$200</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 14 Virginia -->
+      <div class="space" data-idx="14">
+        <div class="property magenta"></div>
+        <h3>VIRGINIA<br>AVENUE</h3>
+        <h3>$160</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 13 States -->
+      <div class="space" data-idx="13">
+        <div class="property magenta"></div>
+        <h3>STATES<br>AVENUE</h3>
+        <h3>$140</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 12 Electric Company -->
+      <div class="space" data-idx="12">
+        <h3>ELECTRIC<br>COMPANY</h3>
+        <img class="electric" src="/images/electric.svg" alt="Electric Company">
+        <h3>$150</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 11 St. Charles Place -->
+      <div class="space" data-idx="11">
+        <div class="property magenta"></div>
+        <h3>ST. CHARLES<br>PLACE</h3>
+        <h3>$140</h3>
+        <div class="tile-tokens"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Center -->
+  <div class="center">
+    <div class="top">
+      <div class="cardCase">
+        <h1>COMMUNITY CHEST</h1>
+        <div class="cChestCards"></div>
+      </div>
+    </div>
+    <div>
+      <img class="logo" src="/images/MonopolyLogo.svg" alt="Logo">
+    </div>
+    <div class="bottom">
+      <div></div>
+      <div class="cardCase">
+        <h1>CHANCE</h1>
+        <div class="chanceCards"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 39-31 along right edge -->
+  <div class="gameRow right">
+    <div class="row">
+      <!-- 39 Boardwalk -->
+      <div class="space" data-idx="39">
+        <div class="property blue"></div>
+        <h3>BOARDWALK</h3>
+        <h3>$400</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 38 Luxury Tax -->
+      <div class="space" data-idx="38">
+        <h2>LUXURY<br>TAX</h2>
+        <img class="luxury" src="/images/luxury.svg" alt="Luxury Tax">
+        <h3>$100</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 37 Park Place -->
+      <div class="space" data-idx="37">
+        <div class="property blue"></div>
+        <h3>PARK<br>PLACE</h3>
+        <h3>$350</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 36 Chance -->
+      <div class="space" data-idx="36">
+        <h3>CHANCE</h3>
+        <img class="chance" src="/images/chance.svg" alt="Chance">
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 35 Short Line -->
+      <div class="space" data-idx="35">
+        <h3>SHORT<br>LINE</h3>
+        <img class="rr" src="/images/train.svg" alt="Short Line">
+        <h3>$200</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 34 Pennsylvania Avenue -->
+      <div class="space" data-idx="34">
+        <div class="property green"></div>
+        <h3>PENNSYLVANIA<br>AVENUE</h3>
+        <h3>$320</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 33 Community Chest -->
+      <div class="space" data-idx="33">
+        <h3>COMMUNITY<br>CHEST</h3>
+        <img class="chest" src="/images/chest.svg" alt="Community Chest">
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 32 North Carolina Avenue -->
+      <div class="space" data-idx="32">
+        <div class="property green"></div>
+        <h3>NORTH CAROLINA<br>AVENUE</h3>
+        <h3>$300</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 31 Pacific Avenue -->
+      <div class="space" data-idx="31">
+        <div class="property green"></div>
+        <h3>PACIFIC<br>AVENUE</h3>
+        <h3>$300</h3>
+        <div class="tile-tokens"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10: Jail -->
+  <div class="corner jail" data-idx="10">
+    <h1 class="h1down">JUST</h1>
+    <div class="jailBlock">
+      <img class="prisoner" src="/images/prisoner.svg" alt="In Jail">
+    </div>
+    <h1 class="visit">VISITING</h1>
+    <div class="tile-tokens"></div>
+  </div>
+
+  <!-- 9-1 along bottom edge -->
+  <div class="gameRow bottom">
+    <div class="row">
+      <!-- 9 Connecticut -->
+      <div class="space" data-idx="9">
+        <div class="property lightBlue"></div>
+        <h3>CONNECTICUT<br>AVENUE</h3>
+        <h3>$120</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 8 Vermont -->
+      <div class="space" data-idx="8">
+        <div class="property lightBlue"></div>
+        <h3>VERMONT<br>AVENUE</h3>
+        <h3>$100</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 7 Chance -->
+      <div class="space" data-idx="7">
+        <h3>CHANCE</h3>
+        <img class="chance" src="/images/chance.svg" alt="Chance">
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 6 Oriental -->
+      <div class="space" data-idx="6">
+        <div class="property lightBlue"></div>
+        <h3>ORIENTAL<br>AVENUE</h3>
+        <h3>$100</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 5 Reading RR -->
+      <div class="space" data-idx="5">
+        <h3>READING<br>RAILROAD</h3>
+        <img class="rr" src="/images/train.svg" alt="Reading Railroad">
+        <h3>$200</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 4 Income Tax -->
+      <div class="space" data-idx="4">
+        <h2>INCOME<br>TAX</h2>
+        <img class="income" src="/images/diamond.svg" alt="Income Tax">
+        <h3>$200</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 3 Baltic -->
+      <div class="space" data-idx="3">
+        <div class="property brown"></div>
+        <h3>BALTIC<br>AVENUE</h3>
+        <h3>$60</h3>
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 2 Community Chest -->
+      <div class="space" data-idx="2">
+        <h3>COMMUNITY<br>CHEST</h3>
+        <img class="chest" src="/images/chest.svg" alt="Community Chest">
+        <div class="tile-tokens"></div>
+      </div>
+      <!-- 1 Mediterranean -->
+      <div class="space" data-idx="1">
+        <div class="property brown"></div>
+        <h3>MEDITERRANEAN<br>AVENUE</h3>
+        <h3>$60</h3>
+        <div class="tile-tokens"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 0: GO -->
+  <div class="corner go" data-idx="0">
+    <div class="start">
+      <h3>COLLECT $200 SALARY AS YOU PASS</h3>
+      <img class="goSvg" src="/images/go.svg" alt="GO">
+    </div>
+    <div class="tile-tokens"></div>
+  </div>
+</div>

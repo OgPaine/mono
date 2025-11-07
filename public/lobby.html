@@ -1,0 +1,171 @@
+<!-- lobby.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Inflatopoly Lobby</title>
+  <link rel="stylesheet" href="/styles/shared.css" />
+  <style>
+    body{background:#0b1221;color:#e5e7eb;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #1f2937;background:#0b1221;position:sticky;top:0;z-index:10}
+    .topbar-left{display:flex;gap:10px;align-items:center}
+    .topbar-title{font-weight:700}
+    .topbar input{background:#0b1221;border:1px solid #1f2937;color:#e5e7eb;border-radius:8px;padding:6px 8px}
+    .topbar button,.topbar a{background:#1f2937;border:1px solid #293548;color:#e5e7eb;border-radius:8px;padding:6px 10px;text-decoration:none}
+    .lobby-layout{display:grid;grid-template-columns:2fr 1fr;gap:12px;padding:12px;max-width:1200px;margin:0 auto}
+    .panel{background:linear-gradient(180deg,#0e1527,#0a1122);border:1px solid #1f2937;border-radius:12px;padding:10px}
+    .panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+    .panel-title{font-weight:600}
+    .panel-sub{font-size:12px;color:#94a3b8}
+    .share-row{display:flex;gap:8px;align-items:center;padding:8px;background:#0b1221;border:1px dashed #334155;border-radius:10px}
+    #seats{list-style:none;padding:0;margin:10px 0 0 0;display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+    #seats a{display:flex;justify-content:space-between;align-items:center;border:1px solid #1f2937;background:#0b1221;border-radius:10px;padding:8px 10px;text-decoration:none;color:#e5e7eb}
+    /* Keep clickable to allow reroute. Just dim. */
+    #seats a[aria-disabled="true"]{opacity:.55}
+    code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;color:#93c5fd}
+    .lobby-notes{color:#94a3b8;font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="lobby-shell">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-title">Inflatopoly Control Lobby</div>
+        <div style="font-size:0.8rem;color:#9ca3af;">Spin up a table and assign seats.</div>
+      </div>
+      <div class="topbar-actions">
+        <label>Game ID <input id="gid" value="default" autocomplete="off" /></label>
+        <button id="create">Create / Join</button>
+        <a id="spectate" href="#">Spectate table</a>
+      </div>
+    </header>
+
+    <main class="lobby-layout">
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Table link</div>
+            <div class="panel-sub">Send this to players. Seats auto-reroute to the next open one.</div>
+          </div>
+        </div>
+        <div class="share-row">
+          <span>Invite URL</span>
+          <code id="share"></code>
+        </div>
+        <ul id="seats"></ul>
+      </section>
+
+      <aside class="panel">
+        <div class="panel-header">
+          <div class="panel-title">How this lobby works</div>
+        </div>
+        <ul class="lobby-notes">
+          <li>Seat links open a dedicated player window for that position.</li>
+          <li>Taken seats are dimmed. Clicks jump to the next open seat.</li>
+          <li>Invite URL always points to the next open seat.</li>
+          <li>Spectate opens a read-only view of the board.</li>
+        </ul>
+      </aside>
+    </main>
+  </div>
+
+  <script type="module">
+    const gid = document.getElementById('gid');
+    const seats = document.getElementById('seats');
+    const share = document.getElementById('share');
+    const spectate = document.getElementById('spectate');
+
+    let state = null;
+    let ws = null;
+
+    const encG = () => encodeURIComponent(gid.value || 'default');
+    const playerUrl = (p) => `/player.html?g=${encG()}&p=${p}`;
+
+    function seatTaken(i){ return !!(state && state.seats && state.seats[i]); }
+    function firstOpen(){
+      for (let i = 0; i < 6; i++) if (!seatTaken(i)) return i;
+      return -1;
+    }
+    function nextOpen(from){
+      for (let k = 1; k <= 6; k++){
+        const i = (from + k) % 6;
+        if (!seatTaken(i)) return i;
+      }
+      return -1;
+    }
+
+    function wsJoin(){
+      const g = gid.value || 'default';
+      if (ws) try{ ws.close(); } catch {}
+      ws = new WebSocket((location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host + '/ws');
+      ws.addEventListener('open', ()=>{
+        let clientId = localStorage.getItem('clientId');
+        if (!clientId) { clientId = Math.random().toString(36).slice(2) + Date.now(); localStorage.setItem('clientId', clientId); }
+        ws.send(JSON.stringify({ type:'join', version:1, gameId:g, clientId, spectator:true }));
+      });
+      ws.addEventListener('message', ev => {
+        let m; try { m = JSON.parse(ev.data) } catch { return; }
+        if (m.type === 'state') { state = m.payload; render(); }
+      });
+    }
+
+    function render() {
+      const enc = encG();
+      const basePlayer = `${location.origin}/player.html?g=${enc}`;
+      const fo = firstOpen();
+
+      share.textContent = fo >= 0 ? `${basePlayer}&p=${fo}` : 'Table full';
+      spectate.href = `/spectator.html?g=${enc}`;
+      history.replaceState(null, '', `/lobby.html?g=${enc}`);
+
+      const items = [];
+      for (let i = 0; i < 6; i++) {
+        const taken = seatTaken(i);
+        const who = state?.players?.[i]?.name || `P${i+1}`;
+        const targetSeat = taken ? nextOpen(i) : i;
+        const labelRight = taken
+          ? (targetSeat >= 0 ? `Taken → Seat ${targetSeat+1}` : 'Taken')
+          : 'Open';
+        const href = (targetSeat >= 0) ? `/player.html?g=${enc}&p=${targetSeat}` : '#';
+        const disabledAttr = taken ? 'aria-disabled="true"' : '';
+        items.push(
+          `<li>
+            <a ${disabledAttr} data-i="${i}" data-taken="${taken?1:0}" href="${href}">
+              <span>Seat ${who}</span><span>${labelRight}</span>
+            </a>
+          </li>`
+        );
+      }
+      seats.innerHTML = items.join('');
+    }
+
+    // Click handling: if seat is taken, reroute to next open. If table full, no-op.
+    seats.addEventListener('click', (e) => {
+      const a = e.target.closest('a');
+      if (!a) return;
+      const taken = a.getAttribute('data-taken') === '1';
+      if (!taken) return; // normal open seat link already points to itself
+      e.preventDefault();
+      const i = Number(a.getAttribute('data-i') || 0);
+      const n = nextOpen(i);
+      if (n >= 0) {
+        location.href = playerUrl(n);
+      } else {
+        alert('All seats are taken.');
+      }
+    });
+
+    function refresh() {
+      render();
+      wsJoin();
+    }
+
+    document.getElementById('create').onclick = refresh;
+
+    const p = new URLSearchParams(location.search);
+    gid.value = p.get('g') || 'default';
+    refresh();
+  </script>
+</body>
+</html>
